@@ -1,0 +1,66 @@
+{
+  "buildCommand": "cd omnidrive-web/omnidrive-web && npm run build",
+  "outputDirectory": "omnidrive-web/omnidrive-web/.next",
+  "installCommand": "cd omnidrive-web/omnidrive-web && npm install",
+  "framework": "nextjs",
+  "devCommand": "cd omnidrive-web/omnidrive-web && npm run dev",
+  "regions": ["iad1"],
+  "functions": {
+    "omnidrive-web/omnidrive-web/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains; preload"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self' 'unsafe-eval' 'unsafe-inline' omnidrive.sujeto10.com *.sujeto10.com https://*.vercel-app.com https://*.google.com https://*.folderfort.com; img-src 'self' data: https: omnidrive.sujeto10.com blob: data:; font-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.vercel.app https://*.vercel-script.com; connect-src 'self' https://*.google.com https://*.folderfort.com https://*.supabase.co wss://*.railway.app https://*.railway.app;"
+        }
+      ]
+    },
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/home",
+      "destination": "/",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ]
+}
