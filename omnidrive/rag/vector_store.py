@@ -66,18 +66,6 @@ class VectorStore:
                 metadata={"hnsw:space": "cosine"}
             )
 
-    def _initialize_collection(self):
-        """Initialize or load the ChromaDB collection."""
-        try:
-            # Try to get existing collection
-            self.collection = self.client.get_collection(name=self.collection_name)
-        except:
-            # Create new collection if it doesn't exist
-            self.collection = self.client.create_collection(
-                name=self.collection_name,
-                metadata={"hnsw:space": "cosine"}
-            )
-
     def add(
         self,
         ids: List[str],

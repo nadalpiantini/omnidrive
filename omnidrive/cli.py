@@ -6,8 +6,8 @@ import click
 import os
 from typing import Optional
 from .config import load_config
-from .services.google_drive import GoogleDriveService
-from .services.folderfort import FolderfortService
+from .services import ServiceFactory
+from .services.base import ServiceError, AuthenticationError
 from .auth import google as google_auth
 from .auth import folderfort as folderfort_auth
 from .rag.embeddings import get_embeddings_generator
@@ -16,8 +16,14 @@ from .memory.serena_client import get_memory_manager
 from .workflows.graphs import get_workflow_engine
 
 
+# Configure ServiceFactory with auth modules
+ServiceFactory._set_auth_modules({
+    'google': google_auth,
+    'folderfort': folderfort_auth,
+})
+
 # Supported drives
-DRIVES = ['google', 'folderfort', 'onedrive', 'dropbox']
+DRIVES = ServiceFactory.get_available_services()
 
 
 @click.group()
@@ -37,7 +43,7 @@ def cli():
     '--drive',
     type=click.Choice(DRIVES),
     default='google',
-    help="Which drive to list (google, folderfort, onedrive, dropbox)."
+    help="Which drive to list."
 )
 @click.option(
     '--limit',
@@ -46,227 +52,199 @@ def cli():
 )
 def list(drive, limit):
     """List files in the specified cloud drive."""
-    if drive == 'google':
-        _list_google_files(limit)
-    elif drive == 'folderfort':
-        _list_folderfort_files(limit)
-    elif drive == 'onedrive':
-        click.echo("OneDrive listing not implemented yet.")
-    elif drive == 'dropbox':
-        click.echo("Dropbox listing not implemented yet.")
-    else:
-        click.secho(f"Drive {drive} not supported.", fg='red')
-
-
-def _list_google_files(limit: int):
-    """List files in Google Drive."""
     try:
-        # Check authentication
-        if not google_auth.is_google_authenticated():
-            click.secho("Not authenticated with Google Drive.", fg='yellow')
+        service = ServiceFactory.create_service(drive, auto_authenticate=False)
+
+        # Check authentication and prompt if needed
+        if not service.is_authenticated():
+            click.secho(f"Not authenticated with {drive}.", fg='yellow')
             if click.confirm("Would you like to authenticate now?"):
-                google_auth.authenticate_google()
+                _authenticate_service(drive)
+                service = ServiceFactory.create_service(drive, auto_authenticate=False)
             else:
                 raise click.Abort()
-
-        # Initialize service
-        service = GoogleDriveService()
 
         # List files
         files = service.list_files(limit=limit)
 
         if not files:
-            click.echo("No files found in Google Drive.")
+            click.echo(f"No files found in {drive}.")
         else:
-            click.echo(f"\n📁 Google Drive Files (showing {len(files)}):")
+            service_name = drive.capitalize()
+            click.echo(f"\n📁 {service_name} Files (showing {len(files)}):")
             click.echo("-" * 60)
             for file in files:
-                icon = _get_file_icon(file.get('mimeType'))
-                size = _format_size(file.get('size'))
+                icon = _get_file_icon(file.get('mimeType') or file.get('type'))
+                size = _format_size(file.get('size') or file.get('file_size'))
                 click.echo(f"{icon} {file['name']}")
                 if size:
                     click.echo(f"   ID: {file['id']} | Size: {size}")
                 else:
                     click.echo(f"   ID: {file['id']}")
 
+    except AuthenticationError as e:
+        click.secho(f"Authentication error: {e}", fg='red')
+        click.echo(f"Run: omnidrive auth {drive}")
+    except ServiceError as e:
+        click.secho(f"Service error: {e}", fg='red')
     except Exception as e:
-        click.secho(f"Error: {e}", fg='red')
-
-
-def _list_folderfort_files(limit: int):
-    """List files in Folderfort."""
-    try:
-        # Check authentication
-        if not folderfort_auth.is_folderfort_authenticated():
-            click.secho("Not authenticated with Folderfort.", fg='yellow')
-            if click.confirm("Would you like to authenticate now?"):
-                folderfort_auth.authenticate_folderfort()
-            else:
-                raise click.Abort()
-
-        # Initialize service
-        token = folderfort_auth.get_folderfort_token()
-        service = FolderfortService(access_token=token)
-
-        # List files
-        files = service.list_files(limit=limit)
-
-        if not files:
-            click.echo("No files found in Folderfort.")
-        else:
-            click.echo(f"\n📁 Folderfort Files (showing {len(files)}):")
-            click.echo("-" * 60)
-            for file in files:
-                icon = _get_file_icon(file.get('type'))
-                size = _format_size(file.get('file_size'))
-                click.echo(f"{icon} {file['name']}")
-                if size:
-                    click.echo(f"   ID: {file['id']} | Size: {size}")
-                else:
-                    click.echo(f"   ID: {file['id']}")
-
-    except Exception as e:
-        click.secho(f"Error: {e}", fg='red')
+        click.secho(f"Unexpected error: {e}", fg='red')
 
 
 @cli.command()
-@click.argument('drive')
+@click.argument('drive', type=click.Choice(DRIVES))
+@click.argument('file_id')
 @click.option('--dest', default='.', help="Local destination folder.")
-def download(drive, dest):
+def download(drive, file_id, dest):
     """Download a file by ID from a drive to local."""
-    if drive == 'google':
-        _download_google_file(dest)
-    elif drive == 'folderfort':
-        _download_folderfort_file(dest)
-    else:
-        click.secho(f"Download from {drive} not yet supported.", fg='yellow')
-
-
-def _download_google_file(dest: str):
-    """Download a file from Google Drive."""
     try:
+        service = ServiceFactory.create_service(drive, auto_authenticate=False)
+
         # Check authentication
-        if not google_auth.is_google_authenticated():
-            click.secho("Not authenticated with Google Drive.", fg='yellow')
+        if not service.is_authenticated():
+            click.secho(f"Not authenticated with {drive}.", fg='yellow')
             if click.confirm("Would you like to authenticate now?"):
-                google_auth.authenticate_google()
+                _authenticate_service(drive)
+                service = ServiceFactory.create_service(drive, auto_authenticate=False)
             else:
                 raise click.Abort()
 
-        # Prompt for file ID
-        file_id = click.prompt("Enter Google Drive file ID")
-
-        # Initialize service and download
-        service = GoogleDriveService()
+        # Download file
         dest_path = service.download_file(file_id, dest)
 
         click.echo(f"✓ Downloaded to: {dest_path}")
 
+    except AuthenticationError as e:
+        click.secho(f"Authentication error: {e}", fg='red')
+        click.echo(f"Run: omnidrive auth {drive}")
+    except ServiceError as e:
+        click.secho(f"Service error: {e}", fg='red')
     except Exception as e:
-        click.secho(f"Error: {e}", fg='red')
-
-
-def _download_folderfort_file(dest: str):
-    """Download a file from Folderfort."""
-    try:
-        # Check authentication
-        if not folderfort_auth.is_folderfort_authenticated():
-            click.secho("Not authenticated with Folderfort.", fg='yellow')
-            if click.confirm("Would you like to authenticate now?"):
-                folderfort_auth.authenticate_folderfort()
-            else:
-                raise click.Abort()
-
-        # Prompt for file ID
-        file_id = click.prompt("Enter Folderfort file ID")
-
-        # Initialize service and download
-        token = folderfort_auth.get_folderfort_token()
-        service = FolderfortService(access_token=token)
-        dest_path = service.download_file(file_id, dest)
-
-        click.echo(f"✓ Downloaded to: {dest_path}")
-
-    except Exception as e:
-        click.secho(f"Error: {e}", fg='red')
+        click.secho(f"Unexpected error: {e}", fg='red')
 
 
 @cli.command()
 @click.argument('file_path', type=click.Path(exists=True))
-@click.argument('service', type=click.Choice(DRIVES))
+@click.argument('drive', type=click.Choice(DRIVES))
 @click.option('--parent-id', help="Parent folder ID (optional)")
-def upload(file_path, service, parent_id):
+def upload(file_path, drive, parent_id):
     """Upload a file to a cloud storage service."""
-    if service == 'google':
-        _upload_google_file(file_path, parent_id)
-    elif service == 'folderfort':
-        _upload_folderfort_file(file_path, parent_id)
-    else:
-        click.secho(f"Upload to {service} not yet supported.", fg='yellow')
-
-
-def _upload_google_file(file_path: str, parent_id: Optional[str]):
-    """Upload a file to Google Drive."""
     try:
+        service = ServiceFactory.create_service(drive, auto_authenticate=False)
+
         # Check authentication
-        if not google_auth.is_google_authenticated():
-            click.secho("Not authenticated with Google Drive.", fg='yellow')
+        if not service.is_authenticated():
+            click.secho(f"Not authenticated with {drive}.", fg='yellow')
             if click.confirm("Would you like to authenticate now?"):
-                google_auth.authenticate_google()
+                _authenticate_service(drive)
+                service = ServiceFactory.create_service(drive, auto_authenticate=False)
             else:
                 raise click.Abort()
 
         # Show file info
         file_size = os.path.getsize(file_path)
-        click.echo(f"\n📤 Uploading {os.path.basename(file_path)}")
+        filename = os.path.basename(file_path)
+        click.echo(f"\n📤 Uploading {filename}")
         click.echo(f"   Size: {_format_size(file_size)}")
 
-        # Initialize service and upload
-        service = GoogleDriveService()
-
-        # Upload with progress indication
+        # Upload with real progress bar
         from tqdm import tqdm
-        click.echo("   Uploading...")
-        result = service.upload_file(file_path, parent_id=parent_id)
+        with tqdm(total=file_size, unit='B', unit_scale=True, desc="Uploading") as pbar:
+            result = service.upload_file(file_path, parent_id=parent_id)
+            pbar.update(file_size)  # Simple progress - TODO: Integrate with service for real-time updates
 
         click.echo(f"✓ Uploaded successfully!")
         click.echo(f"   ID: {result.get('id')}")
         click.echo(f"   Name: {result.get('name')}")
 
+    except AuthenticationError as e:
+        click.secho(f"Authentication error: {e}", fg='red')
+        click.echo(f"Run: omnidrive auth {drive}")
+    except ServiceError as e:
+        click.secho(f"Service error: {e}", fg='red')
     except Exception as e:
-        click.secho(f"Error: {e}", fg='red')
+        click.secho(f"Unexpected error: {e}", fg='red')
 
 
-def _upload_folderfort_file(file_path: str, parent_id: Optional[str]):
-    """Upload a file to Folderfort."""
+@cli.command()
+@click.argument('drive', type=click.Choice(DRIVES))
+@click.argument('file_id')
+@click.option('--permanent', is_flag=True, help="Permanently delete (skip trash).")
+def delete(drive, file_id, permanent):
+    """Delete a file from cloud storage."""
     try:
+        service = ServiceFactory.create_service(drive, auto_authenticate=False)
+
         # Check authentication
-        if not folderfort_auth.is_folderfort_authenticated():
-            click.secho("Not authenticated with Folderfort.", fg='yellow')
+        if not service.is_authenticated():
+            click.secho(f"Not authenticated with {drive}.", fg='yellow')
             if click.confirm("Would you like to authenticate now?"):
-                folderfort_auth.authenticate_folderfort()
+                _authenticate_service(drive)
+                service = ServiceFactory.create_service(drive, auto_authenticate=False)
             else:
                 raise click.Abort()
 
-        # Show file info
-        file_size = os.path.getsize(file_path)
-        click.echo(f"\n📤 Uploading {os.path.basename(file_path)}")
-        click.echo(f"   Size: {_format_size(file_size)}")
+        # Confirm deletion
+        if not permanent:
+            msg = f"Move file to trash in {drive}?"
+        else:
+            msg = f"Permanently delete file from {drive}?"
 
-        # Initialize service and upload
-        token = folderfort_auth.get_folderfort_token()
-        service = FolderfortService(access_token=token)
+        click.secho(f"⚠️  {msg}", fg='yellow', bold=True)
+        if not click.confirm("This action cannot be undone. Continue?"):
+            click.echo("Delete cancelled.")
+            return
 
-        # Upload with progress indication
-        click.echo("   Uploading...")
-        result = service.upload_file(file_path, parent_id=parent_id)
+        # Delete file
+        success = service.delete_file(file_id, permanent=permanent)
 
-        click.echo(f"✓ Uploaded successfully!")
-        click.echo(f"   ID: {result.get('id')}")
-        click.echo(f"   Name: {result.get('name')}")
+        if success:
+            if permanent:
+                click.echo("✓ File permanently deleted.")
+            else:
+                click.echo("✓ File moved to trash.")
 
+    except AuthenticationError as e:
+        click.secho(f"Authentication error: {e}", fg='red')
+        click.echo(f"Run: omnidrive auth {drive}")
+    except ServiceError as e:
+        click.secho(f"Service error: {e}", fg='red')
     except Exception as e:
-        click.secho(f"Error: {e}", fg='red')
+        click.secho(f"Unexpected error: {e}", fg='red')
+
+
+@cli.command()
+@click.argument('drive', type=click.Choice(DRIVES))
+@click.argument('folder_name')
+@click.option('--parent-id', help="Parent folder ID (optional).")
+def create_folder(drive, folder_name, parent_id):
+    """Create a new folder in cloud storage."""
+    try:
+        service = ServiceFactory.create_service(drive, auto_authenticate=False)
+
+        # Check authentication
+        if not service.is_authenticated():
+            click.secho(f"Not authenticated with {drive}.", fg='yellow')
+            if click.confirm("Would you like to authenticate now?"):
+                _authenticate_service(drive)
+                service = ServiceFactory.create_service(drive, auto_authenticate=False)
+            else:
+                raise click.Abort()
+
+        # Create folder
+        result = service.create_folder(folder_name, parent_id=parent_id)
+
+        click.echo(f"✓ Folder created successfully!")
+        click.echo(f"   Name: {result.get('name')}")
+        click.echo(f"   ID: {result.get('id')}")
+
+    except AuthenticationError as e:
+        click.secho(f"Authentication error: {e}", fg='red')
+        click.echo(f"Run: omnidrive auth {drive}")
+    except ServiceError as e:
+        click.secho(f"Service error: {e}", fg='red')
+    except Exception as e:
+        click.secho(f"Unexpected error: {e}", fg='red')
 
 
 @cli.command()
@@ -322,6 +300,10 @@ def sync(source, target, dry_run, limit):
 
             click.echo(f"\n✓ Synced {len(files_to_sync)} files!")
 
+    except AuthenticationError as e:
+        click.secho(f"Authentication error: {e}", fg='red')
+    except ServiceError as e:
+        click.secho(f"Service error: {e}", fg='red')
     except Exception as e:
         click.secho(f"Error: {e}", fg='red')
 
@@ -386,21 +368,15 @@ def compare(service1, service2, limit):
 
 def _get_files_from_service(service: str, limit: int) -> list:
     """Get files from a cloud storage service."""
-    if service == 'google':
-        if not google_auth.is_google_authenticated():
-            raise click.ClickException("Not authenticated with Google Drive. Run 'omnidrive auth google'")
-        service_obj = GoogleDriveService()
-        return service_obj.list_files(limit=limit)
+    service_obj = ServiceFactory.create_service(service, auto_authenticate=False)
 
-    elif service == 'folderfort':
-        if not folderfort_auth.is_folderfort_authenticated():
-            raise click.ClickException("Not authenticated with Folderfort. Run 'omnidrive auth folderfort'")
-        token = folderfort_auth.get_folderfort_token()
-        service_obj = FolderfortService(access_token=token)
-        return service_obj.list_files(limit=limit)
+    if not service_obj.is_authenticated():
+        raise click.ClickException(
+            f"Not authenticated with {service.capitalize()}. "
+            f"Run 'omnidrive auth {service}'"
+        )
 
-    else:
-        raise click.ClickException(f"Service {service} not implemented yet")
+    return service_obj.list_files(limit=limit)
 
 
 def _sync_file(file_data: dict, source: str, target: str):
@@ -408,44 +384,40 @@ def _sync_file(file_data: dict, source: str, target: str):
     import tempfile
 
     # Download from source
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        if source == 'google':
-            service = GoogleDriveService()
-            service.download_file(file_data['id'], tmp.name)
-        elif source == 'folderfort':
-            token = folderfort_auth.get_folderfort_token()
-            service = FolderfortService(access_token=token)
-            service.download_file(file_data['id'], tmp.name)
+    source_service = ServiceFactory.create_service(source, auto_authenticate=False)
 
-        # Upload to target
-        if target == 'google':
-            service = GoogleDriveService()
-            service.upload_file(tmp.name)
-        elif target == 'folderfort':
-            token = folderfort_auth.get_folderfort_token()
-            service = FolderfortService(access_token=token)
-            service.upload_file(tmp.name)
+    # Upload to target
+    target_service = ServiceFactory.create_service(target, auto_authenticate=False)
+
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        # Download
+        source_service.download_file(file_data['id'], tmp.name)
+
+        # Upload
+        target_service.upload_file(tmp.name)
 
         # Cleanup
         os.unlink(tmp.name)
+
+
+def _authenticate_service(service: str):
+    """Authenticate with a cloud storage service."""
+    if service == 'google':
+        google_auth.authenticate_google()
+    elif service == 'folderfort':
+        folderfort_auth.authenticate_folderfort()
+    else:
+        raise click.ClickException(f"{service.capitalize()} authentication not implemented yet.")
 
 
 @cli.command()
 @click.argument('service', type=click.Choice(DRIVES))
 def auth(service):
     """Authenticate with a cloud storage service."""
-    if service == 'google':
-        try:
-            google_auth.authenticate_google()
-        except click.Abort:
-            return
-    elif service == 'folderfort':
-        try:
-            folderfort_auth.authenticate_folderfort()
-        except click.Abort:
-            return
-    else:
-        click.echo(f"{service.capitalize()} authentication not implemented yet.")
+    try:
+        _authenticate_service(service)
+    except click.Abort:
+        return
 
 
 @cli.command()

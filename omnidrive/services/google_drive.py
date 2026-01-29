@@ -2,6 +2,7 @@
 Google Drive service implementation.
 """
 import os
+import time
 from typing import List, Dict, Any, Optional
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -16,6 +17,9 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 class GoogleDriveService(CloudService):
     """Google Drive cloud storage service."""
 
+    # Cache configuration
+    CACHE_TTL = 300  # 5 minutes
+
     def __init__(self, access_token: Optional[str] = None, credentials_path: Optional[str] = None):
         """
         Initialize Google Drive service.
@@ -27,6 +31,8 @@ class GoogleDriveService(CloudService):
         super().__init__(access_token)
         self.credentials_path = credentials_path or os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
         self._service = None
+        self._cache = {}  # Simple cache: {query_key: (timestamp, data)}
+        self._page_size = 100  # Default page size for pagination
 
     @property
     def service(self):
@@ -43,6 +49,26 @@ class GoogleDriveService(CloudService):
             )
             self._service = build('drive', 'v3', credentials=creds)
         return self._service
+
+    def _get_cache_key(self, folder_id: Optional[str], query: str, limit: int) -> str:
+        """Generate cache key for list_files."""
+        return f"{folder_id}:{query}:{limit}"
+
+    def _get_from_cache(self, cache_key: str) -> Optional[List[Dict[str, Any]]]:
+        """Get data from cache if not expired."""
+        if cache_key in self._cache:
+            timestamp, data = self._cache[cache_key]
+            if time.time() - timestamp < self.CACHE_TTL:
+                return data
+        return None
+
+    def _set_cache(self, cache_key: str, data: List[Dict[str, Any]]):
+        """Store data in cache."""
+        self._cache[cache_key] = (time.time(), data)
+
+    def clear_cache(self):
+        """Clear the file list cache."""
+        self._cache.clear()
 
     def authenticate(self, **kwargs) -> str:
         """
@@ -74,12 +100,12 @@ class GoogleDriveService(CloudService):
         **kwargs
     ) -> List[Dict[str, Any]]:
         """
-        List files in Google Drive.
+        List files in Google Drive with caching and pagination.
 
         Args:
             folder_id: Parent folder ID to list from. None for root.
             limit: Maximum number of files to return
-            **kwargs: Additional parameters (query, orderBy, etc.)
+            **kwargs: Additional parameters (query, orderBy, use_cache, etc.)
 
         Returns:
             List of file metadata dictionaries
@@ -88,23 +114,48 @@ class GoogleDriveService(CloudService):
             ServiceError: If listing fails
         """
         try:
-            # Build query
+            # Check cache first
+            use_cache = kwargs.get('use_cache', True)
             query = kwargs.get('query', '')
+            cache_key = self._get_cache_key(folder_id, query, limit)
+
+            if use_cache:
+                cached_data = self._get_from_cache(cache_key)
+                if cached_data is not None:
+                    return cached_data[:limit]  # Return cached data, respecting limit
+
+            # Build query
             if folder_id:
                 query = f"'{folder_id}' in parents"
                 if kwargs.get('query'):
                     query = f"({query}) and ({kwargs['query']})"
 
-            # List files
-            results = self.service.files().list(
-                pageSize=limit,
-                q=query,
-                fields="files(id, name, mimeType, size, parents, createdTime, modifiedTime)",
-                orderBy=kwargs.get('orderBy', 'name')
-            ).execute()
+            # Fetch files with pagination
+            all_files = []
+            page_token = None
 
-            items = results.get('files', [])
-            return items
+            while len(all_files) < limit:
+                results = self.service.files().list(
+                    pageSize=min(self._page_size, limit - len(all_files)),
+                    q=query,
+                    fields="nextPageToken, files(id, name, mimeType, size, parents, createdTime, modifiedTime)",
+                    orderBy=kwargs.get('orderBy', 'name'),
+                    pageToken=page_token
+                ).execute()
+
+                items = results.get('files', [])
+                all_files.extend(items)
+
+                # Check if we have more pages
+                page_token = results.get('nextPageToken')
+                if not page_token or len(all_files) >= limit:
+                    break
+
+            # Cache the results
+            if use_cache:
+                self._set_cache(cache_key, all_files)
+
+            return all_files[:limit]
 
         except HttpError as e:
             raise ServiceError(f"Failed to list files: {e}", service_name="google")

@@ -2,7 +2,7 @@
 Workflow automation system.
 Simple workflow implementation for file management tasks.
 """
-from typing import Dict, Any, List, Callable
+from typing import Dict, Any, List, Callable, Optional
 from dataclasses import dataclass
 from enum import Enum
 

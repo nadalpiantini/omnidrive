@@ -49,9 +49,11 @@ omnidrive auth <service>     # Authenticate with a service
 
 ### File Operations
 ```bash
-omnidrive list [--drive SERVICE] [--limit N]  # List files
-omnidrive upload <file> <service>             # Upload file
-omnidrive download <drive> [--dest PATH]      # Download file
+omnidrive list [--drive SERVICE] [--limit N]      # List files
+omnidrive upload <file> <service>                 # Upload file
+omnidrive download <drive> <file_id> [--dest PATH]  # Download file by ID
+omnidrive delete <drive> <file_id> [--permanent]  # Delete file (trash or permanent)
+omnidrive create-folder <drive> <name> [--parent-id ID]  # Create new folder
 ```
 
 ### Multi-Cloud Operations
