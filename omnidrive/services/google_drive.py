@@ -2,9 +2,12 @@
 Google Drive service implementation.
 """
 import os
+import json
 import time
 from typing import List, Dict, Any, Optional
 from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from ..services.base import CloudService, ServiceError, AuthenticationError
@@ -20,33 +23,89 @@ class GoogleDriveService(CloudService):
     # Cache configuration
     CACHE_TTL = 300  # 5 minutes
 
-    def __init__(self, access_token: Optional[str] = None, credentials_path: Optional[str] = None):
+    def __init__(
+        self,
+        access_token: Optional[str] = None,
+        credentials_path: Optional[str] = None,
+        oauth_token_path: Optional[str] = None,
+        use_oauth: bool = False
+    ):
         """
         Initialize Google Drive service.
 
         Args:
             access_token: OAuth access token (not used with service account)
             credentials_path: Path to service account JSON file
+            oauth_token_path: Path to OAuth token JSON file
+            use_oauth: If True, use OAuth instead of service account
         """
         super().__init__(access_token)
         self.credentials_path = credentials_path or os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+        self.oauth_token_path = oauth_token_path
+        self.use_oauth = use_oauth
         self._service = None
         self._cache = {}  # Simple cache: {query_key: (timestamp, data)}
         self._page_size = 100  # Default page size for pagination
+
+    def _get_oauth_credentials(self) -> Optional[Credentials]:
+        """Load and refresh OAuth credentials from token file."""
+        if not self.oauth_token_path or not os.path.exists(self.oauth_token_path):
+            return None
+
+        with open(self.oauth_token_path) as f:
+            token_data = json.load(f)
+
+        creds = Credentials(
+            token=token_data.get('token'),
+            refresh_token=token_data.get('refresh_token'),
+            token_uri=token_data.get('token_uri'),
+            client_id=token_data.get('client_id'),
+            client_secret=token_data.get('client_secret'),
+            scopes=token_data.get('scopes')
+        )
+
+        # Refresh if expired
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            # Save refreshed token
+            new_token_data = {
+                'token': creds.token,
+                'refresh_token': creds.refresh_token,
+                'token_uri': creds.token_uri,
+                'client_id': creds.client_id,
+                'client_secret': creds.client_secret,
+                'scopes': list(creds.scopes) if creds.scopes else [],
+                'expiry': creds.expiry.isoformat() + 'Z' if creds.expiry else None
+            }
+            with open(self.oauth_token_path, 'w') as f:
+                json.dump(new_token_data, f)
+
+        return creds
 
     @property
     def service(self):
         """Lazy-load the Google Drive service."""
         if self._service is None:
-            if not self.credentials_path:
+            creds = None
+
+            # Try OAuth first if enabled
+            if self.use_oauth and self.oauth_token_path:
+                creds = self._get_oauth_credentials()
+
+            # Fall back to service account
+            if creds is None and self.credentials_path:
+                if os.path.exists(self.credentials_path):
+                    creds = service_account.Credentials.from_service_account_file(
+                        self.credentials_path,
+                        scopes=SCOPES
+                    )
+
+            if creds is None:
                 raise AuthenticationError(
                     "Google credentials not found. "
-                    "Set GOOGLE_APPLICATION_CREDENTIALS or provide credentials_path."
+                    "Configure OAuth token or service account."
                 )
-            creds = service_account.Credentials.from_service_account_file(
-                self.credentials_path,
-                scopes=SCOPES
-            )
+
             self._service = build('drive', 'v3', credentials=creds)
         return self._service
 
@@ -69,6 +128,17 @@ class GoogleDriveService(CloudService):
     def clear_cache(self):
         """Clear the file list cache."""
         self._cache.clear()
+
+    def is_authenticated(self) -> bool:
+        """Check if Google Drive is authenticated via OAuth or service account."""
+        # Check OAuth token
+        if self.use_oauth and self.oauth_token_path:
+            if os.path.exists(self.oauth_token_path):
+                return True
+        # Check service account
+        if self.credentials_path and os.path.exists(self.credentials_path):
+            return True
+        return False
 
     def authenticate(self, **kwargs) -> str:
         """

@@ -10,10 +10,33 @@ from .services import ServiceFactory
 from .services.base import ServiceError, AuthenticationError
 from .auth import google as google_auth
 from .auth import folderfort as folderfort_auth
-from .rag.embeddings import get_embeddings_generator
-from .rag.indexer import FileIndexer, SemanticSearch
-from .memory.serena_client import get_memory_manager
-from .workflows.graphs import get_workflow_engine
+
+# Lazy imports for optional modules (Python 3.14 compatibility)
+def _get_rag_modules():
+    """Lazy load RAG modules to avoid import errors with Python 3.14."""
+    try:
+        from .rag.embeddings import get_embeddings_generator
+        from .rag.indexer import FileIndexer, SemanticSearch
+        return get_embeddings_generator, FileIndexer, SemanticSearch
+    except ImportError as e:
+        click.secho(f"RAG modules not available: {e}", fg='yellow')
+        return None, None, None
+
+def _get_memory_manager():
+    """Lazy load memory manager."""
+    try:
+        from .memory.serena_client import get_memory_manager
+        return get_memory_manager
+    except ImportError:
+        return None
+
+def _get_workflow_engine():
+    """Lazy load workflow engine."""
+    try:
+        from .workflows.graphs import get_workflow_engine
+        return get_workflow_engine
+    except ImportError:
+        return None
 
 
 # Configure ServiceFactory with auth modules
@@ -668,9 +691,15 @@ def _get_file_icon(mime_type: str) -> str:
         return "📄"
 
 
-def _format_size(size_bytes: Optional[int]) -> str:
+def _format_size(size_bytes) -> str:
     """Format file size in human-readable format."""
     if size_bytes is None:
+        return ""
+
+    # Convert to float if string
+    try:
+        size_bytes = float(size_bytes)
+    except (ValueError, TypeError):
         return ""
 
     for unit in ['B', 'KB', 'MB', 'GB']:

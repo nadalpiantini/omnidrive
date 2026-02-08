@@ -6,6 +6,7 @@ from typing import Optional, Dict, Type
 from .base import CloudService, ServiceError
 from .google_drive import GoogleDriveService
 from .folderfort import FolderfortService
+from ..config import load_config
 
 
 class ServiceFactory:
@@ -77,11 +78,13 @@ class ServiceFactory:
         if auto_authenticate and cls._auth_modules:
             auth_module = cls._auth_modules.get(service_name)
             if auth_module:
+                # Get token function first
+                get_token_fn = getattr(auth_module, f'get_{service_name}_token', None)
+
                 # Check if already authenticated
                 is_auth_fn = getattr(auth_module, f'is_{service_name}_authenticated', None)
                 if is_auth_fn and not is_auth_fn():
                     # Not authenticated, need to authenticate
-                    get_token_fn = getattr(auth_module, f'get_{service_name}_token', None)
                     if get_token_fn:
                         access_token = get_token_fn()
                     else:
@@ -96,8 +99,21 @@ class ServiceFactory:
                     # Already authenticated, get token
                     access_token = get_token_fn()
 
-        # Create service instance
-        service = service_class(access_token=access_token)
+        # Create service instance with service-specific configuration
+        if service_name == 'google':
+            # Google Drive - check for OAuth or service account
+            cfg = load_config()
+            credentials_path = cfg.get('google_key_path')
+            oauth_token_path = cfg.get('google_token_path')
+            use_oauth = cfg.get('google_use_oauth', False)
+            service = service_class(
+                access_token=access_token,
+                credentials_path=credentials_path,
+                oauth_token_path=oauth_token_path,
+                use_oauth=use_oauth
+            )
+        else:
+            service = service_class(access_token=access_token)
 
         return service
 
