@@ -623,45 +623,188 @@ def workflow():
 
 @workflow.command('list')
 def list_workflows_cmd():
-    """List available workflows."""
+    """List available LangGraph workflows."""
     try:
-        engine = get_workflow_engine()
+        get_engine = _get_workflow_engine()
+        if not get_engine:
+            click.secho("Workflow engine not available. Install langgraph.", fg='red')
+            return
+
+        engine = get_engine()
         workflows = engine.list_workflows()
 
         if not workflows:
             click.echo("No workflows found.")
             return
 
-        click.echo("\n⚙️ Available Workflows:")
-        click.echo("-" * 60)
+        click.echo("\n⚙️ Available LangGraph Workflows:")
+        click.echo("=" * 60)
         for wf in workflows:
-            click.echo(f"  • {wf['name']}")
-            click.echo(f"    {wf['description']}")
-            click.echo(f"    Steps: {wf['steps']}")
+            click.echo(f"\n  🔷 {wf['name']}")
+            click.echo(f"     {wf['description']}")
+            click.echo(f"     Nodes: {wf.get('nodes', 'N/A')}")
 
     except Exception as e:
         click.secho(f"Error: {e}", fg='red')
 
 
 @workflow.command()
-@click.argument('name')
-def run(name):
-    """Run a workflow."""
+@click.argument('name', type=click.Choice(['smart-sync', 'rag-search', 'obsidian-ingest']))
+@click.option('--source', type=click.Choice(DRIVES), help="Source service (for sync).")
+@click.option('--target', type=click.Choice(DRIVES), help="Target service (for sync).")
+@click.option('--query', help="Search query (for rag-search).")
+@click.option('--vault', help="Obsidian vault path (for obsidian-ingest).")
+@click.option('--dry-run', is_flag=True, help="Preview without executing.")
+def run(name, source, target, query, vault, dry_run):
+    """Run a LangGraph workflow."""
     try:
-        engine = get_workflow_engine()
+        get_engine = _get_workflow_engine()
+        if not get_engine:
+            click.secho("Workflow engine not available. Install langgraph.", fg='red')
+            return
 
-        click.echo(f"\n🚀 Running workflow: {name}")
+        engine = get_engine()
+
+        click.echo(f"\n🚀 Running LangGraph workflow: {name}")
         click.echo("=" * 60)
 
-        result = engine.execute_workflow(name)
+        if name == 'smart-sync':
+            if not source or not target:
+                click.secho("--source and --target required for smart-sync", fg='red')
+                return
+            result = engine.execute_sync(source, target, dry_run=dry_run)
 
-        if result.status.value == "completed":
-            click.echo(f"✓ {result.message}")
+        elif name == 'rag-search':
+            if not query:
+                click.secho("--query required for rag-search", fg='red')
+                return
+            result = engine.execute_search(query)
+            if result.get('reasoned_response'):
+                click.echo(f"\n🧠 Result:\n{result['reasoned_response']}")
+
+        elif name == 'obsidian-ingest':
+            if not vault:
+                click.secho("--vault required for obsidian-ingest", fg='red')
+                return
+            result = engine.execute_obsidian_ingest(vault)
+
+        # Show summary
+        if result.get('errors'):
+            click.secho(f"\n⚠️ Errors: {result['errors']}", fg='yellow')
         else:
-            click.secho(f"✗ {result.message}", fg='red')
+            click.secho("\n✓ Workflow completed successfully", fg='green')
 
     except Exception as e:
         click.secho(f"Error: {e}", fg='red')
+
+
+@cli.group()
+def obsidian():
+    """Manage Obsidian vault integration."""
+    pass
+
+
+@obsidian.command()
+@click.argument('vault_path', type=click.Path(exists=True))
+def ingest(vault_path):
+    """Ingest an Obsidian vault for semantic search."""
+    try:
+        get_engine = _get_workflow_engine()
+        if not get_engine:
+            click.secho("LangGraph not available. Install with: pip install langgraph", fg='red')
+            return
+
+        engine = get_engine()
+
+        click.echo(f"\n📓 Ingesting Obsidian vault: {vault_path}")
+        click.echo("=" * 60)
+
+        result = engine.execute_obsidian_ingest(vault_path)
+
+        click.echo(f"\n📊 Summary:")
+        click.echo(f"   Files found: {len(result.get('files_found', []))}")
+        click.echo(f"   Files indexed: {len(result.get('files_indexed', []))}")
+        click.echo(f"   Backlinks extracted: {sum(len(v) for v in result.get('backlinks_graph', {}).values())}")
+
+        if result.get('errors'):
+            click.secho(f"\n⚠️ Errors: {len(result['errors'])}", fg='yellow')
+        else:
+            click.secho("\n✓ Vault ingested successfully!", fg='green')
+
+    except Exception as e:
+        click.secho(f"Error: {e}", fg='red')
+
+
+@obsidian.command('search')
+@click.argument('query')
+@click.option('--top-k', default=5, help="Number of results.")
+def obsidian_search(query, top_k):
+    """Search within ingested Obsidian vault."""
+    try:
+        get_engine = _get_workflow_engine()
+        if not get_engine:
+            click.secho("LangGraph not available.", fg='red')
+            return
+
+        engine = get_engine()
+
+        click.echo(f"\n🔍 Searching Obsidian: '{query}'")
+        click.echo("=" * 60)
+
+        result = engine.execute_search(query, service='obsidian', top_k=top_k)
+
+        if result.get('reasoned_response'):
+            click.echo(f"\n{result['reasoned_response']}")
+        else:
+            click.echo("No results found. Have you ingested a vault first?")
+            click.echo("Run: omnidrive obsidian ingest /path/to/vault")
+
+    except Exception as e:
+        click.secho(f"Error: {e}", fg='red')
+
+
+@obsidian.command('backlinks')
+@click.argument('vault_path', type=click.Path(exists=True))
+@click.option('--output', type=click.Path(), help="Output JSON file.")
+def show_backlinks(vault_path, output):
+    """Extract and show backlinks graph from vault."""
+    import re
+    import json
+    from pathlib import Path
+
+    click.echo(f"\n🔗 Extracting backlinks from: {vault_path}")
+    click.echo("=" * 60)
+
+    vault = Path(vault_path)
+    md_files = list(vault.rglob("*.md"))
+
+    backlinks = {}
+    wiki_link_pattern = re.compile(r'\[\[([^\]|]+)(?:\|[^\]]+)?\]\]')
+
+    for file_path in md_files:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            file_name = file_path.stem
+            links = wiki_link_pattern.findall(content)
+            if links:
+                backlinks[file_name] = links
+        except Exception:
+            pass
+
+    total_links = sum(len(v) for v in backlinks.values())
+    click.echo(f"\n📊 Found {total_links} backlinks in {len(backlinks)} files")
+
+    # Show top connected files
+    sorted_files = sorted(backlinks.items(), key=lambda x: len(x[1]), reverse=True)[:10]
+    click.echo("\n🔝 Most connected files:")
+    for name, links in sorted_files:
+        click.echo(f"   {name}: {len(links)} links → {', '.join(links[:3])}...")
+
+    if output:
+        with open(output, 'w') as f:
+            json.dump(backlinks, f, indent=2)
+        click.echo(f"\n✓ Saved to {output}")
 
 
 # Helper functions
