@@ -1,0 +1,10 @@
+{
+  "project": "omnidrive",
+  "mode": "cli",
+  "llm_policy": "stateless",
+  "last_snapshot": null,
+  "coding_style": "production",
+  "allow_invention": false,
+  "cloud_providers": ["google", "folderfort"],
+  "current_session": null
+}

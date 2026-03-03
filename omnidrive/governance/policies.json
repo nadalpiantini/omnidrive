@@ -1,0 +1,78 @@
+{
+  "omnidrive_cli": {
+    "description": "OmniDrive CLI agent policies",
+    "version": "1.0.0",
+
+    "allowed_tools": [
+      "read",
+      "list",
+      "search",
+      "download",
+      "upload",
+      "create_folder",
+      "index",
+      "workflow"
+    ],
+
+    "blocked_tools": [
+      "shell",
+      "admin",
+      "database"
+    ],
+
+    "require_approval": {
+      "delete": {
+        "reason": "Permanently removes file from cloud storage",
+        "timeout": 300
+      },
+      "sync_destructive": {
+        "reason": "May overwrite files on target service",
+        "timeout": 300
+      },
+      "bulk_delete": {
+        "reason": "Deletes multiple files at once",
+        "timeout": 600
+      }
+    },
+
+    "audit_required": [
+      "upload",
+      "download",
+      "delete",
+      "sync",
+      "create_folder"
+    ],
+
+    "confidence_check": {
+      "enabled": true,
+      "threshold": 0.7,
+      "actions": ["search", "rag_query"]
+    }
+  },
+
+  "omnidrive_rag": {
+    "description": "OmniDrive RAG agent policies",
+    "version": "1.0.0",
+
+    "allowed_tools": [
+      "read",
+      "search",
+      "embed",
+      "index"
+    ],
+
+    "blocked_tools": [
+      "write",
+      "delete",
+      "execute",
+      "shell"
+    ],
+
+    "require_approval": {},
+
+    "audit_required": [
+      "index",
+      "search"
+    ]
+  }
+}
