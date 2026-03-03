@@ -16,6 +16,7 @@ COPY . .
 
 # Expose port
 EXPOSE 8000
+RUN mkdir -p /data && chmod 777 /data
 
 # Run the application
 ENV PYTHONPATH=/app
