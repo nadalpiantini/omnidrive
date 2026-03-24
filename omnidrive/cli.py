@@ -83,7 +83,7 @@ def list(drive, limit):
             click.secho(f"Not authenticated with {drive}.", fg='yellow')
             if click.confirm("Would you like to authenticate now?"):
                 _authenticate_service(drive)
-                service = ServiceFactory.create_service(drive, auto_authenticate=False)
+                service = ServiceFactory.create_service(drive, auto_authenticate=True)
             else:
                 raise click.Abort()
 
@@ -128,7 +128,7 @@ def download(drive, file_id, dest):
             click.secho(f"Not authenticated with {drive}.", fg='yellow')
             if click.confirm("Would you like to authenticate now?"):
                 _authenticate_service(drive)
-                service = ServiceFactory.create_service(drive, auto_authenticate=False)
+                service = ServiceFactory.create_service(drive, auto_authenticate=True)
             else:
                 raise click.Abort()
 
@@ -160,7 +160,7 @@ def upload(file_path, drive, parent_id):
             click.secho(f"Not authenticated with {drive}.", fg='yellow')
             if click.confirm("Would you like to authenticate now?"):
                 _authenticate_service(drive)
-                service = ServiceFactory.create_service(drive, auto_authenticate=False)
+                service = ServiceFactory.create_service(drive, auto_authenticate=True)
             else:
                 raise click.Abort()
 
@@ -203,7 +203,7 @@ def delete(drive, file_id, permanent):
             click.secho(f"Not authenticated with {drive}.", fg='yellow')
             if click.confirm("Would you like to authenticate now?"):
                 _authenticate_service(drive)
-                service = ServiceFactory.create_service(drive, auto_authenticate=False)
+                service = ServiceFactory.create_service(drive, auto_authenticate=True)
             else:
                 raise click.Abort()
 
@@ -250,7 +250,7 @@ def create_folder(drive, folder_name, parent_id):
             click.secho(f"Not authenticated with {drive}.", fg='yellow')
             if click.confirm("Would you like to authenticate now?"):
                 _authenticate_service(drive)
-                service = ServiceFactory.create_service(drive, auto_authenticate=False)
+                service = ServiceFactory.create_service(drive, auto_authenticate=True)
             else:
                 raise click.Abort()
 
@@ -391,7 +391,7 @@ def compare(service1, service2, limit):
 
 def _get_files_from_service(service: str, limit: int) -> list:
     """Get files from a cloud storage service."""
-    service_obj = ServiceFactory.create_service(service, auto_authenticate=False)
+    service_obj = ServiceFactory.create_service(service, auto_authenticate=True)
 
     if not service_obj.is_authenticated():
         raise click.ClickException(
@@ -407,10 +407,10 @@ def _sync_file(file_data: dict, source: str, target: str):
     import tempfile
 
     # Download from source
-    source_service = ServiceFactory.create_service(source, auto_authenticate=False)
+    source_service = ServiceFactory.create_service(source, auto_authenticate=True)
 
     # Upload to target
-    target_service = ServiceFactory.create_service(target, auto_authenticate=False)
+    target_service = ServiceFactory.create_service(target, auto_authenticate=True)
 
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         # Download
@@ -460,6 +460,12 @@ def index(service, limit):
             click.echo("RAG features require DeepSeek API for embeddings (or use local sentence-transformers).")
             return
 
+        # Lazy-load RAG modules
+        _, FileIndexer, _ = _get_rag_modules()
+        if not FileIndexer:
+            click.secho("RAG dependencies missing. Install requirements for RAG (e.g., sentence-transformers, chromadb).", fg='red')
+            return
+
         # Get files from service
         files = _get_files_from_service(service, limit)
 
@@ -504,6 +510,12 @@ def search(query, service, top_k):
         if not os.getenv('DEEPSEEK_API_KEY'):
             click.secho("⚠ DEEPSEEK_API_KEY environment variable not set.", fg='yellow')
             click.echo("Set it with: export DEEPSEEK_API_KEY='your-key-here'")
+            return
+
+        # Lazy-load RAG modules
+        _, _, SemanticSearch = _get_rag_modules()
+        if not SemanticSearch:
+            click.secho("RAG dependencies missing. Install requirements for RAG (e.g., sentence-transformers, chromadb).", fg='red')
             return
 
         # Initialize semantic search
@@ -555,7 +567,11 @@ def session():
 def save(name):
     """Save current session state."""
     try:
-        memory = get_memory_manager()
+        memory_factory = _get_memory_manager()
+        if not memory_factory:
+            click.secho("Memory manager not available. Install dependencies for persistent memory.", fg='red')
+            return
+        memory = memory_factory()
 
         # Get current state
         from datetime import datetime
@@ -577,7 +593,11 @@ def save(name):
 def resume(name):
     """Resume a saved session."""
     try:
-        memory = get_memory_manager()
+        memory_factory = _get_memory_manager()
+        if not memory_factory:
+            click.secho("Memory manager not available. Install dependencies for persistent memory.", fg='red')
+            return
+        memory = memory_factory()
         state = memory.read_memory(f"session_{name}")
 
         if not state:
@@ -597,7 +617,11 @@ def resume(name):
 def list_sessions():
     """List all saved sessions."""
     try:
-        memory = get_memory_manager()
+        memory_factory = _get_memory_manager()
+        if not memory_factory:
+            click.secho("Memory manager not available. Install dependencies for persistent memory.", fg='red')
+            return
+        memory = memory_factory()
         sessions = [m for m in memory.list_memories() if m['key'].startswith('session_')]
 
         if not sessions:

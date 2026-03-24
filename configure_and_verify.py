@@ -4,10 +4,14 @@ import requests
 import json
 import os
 
-# Token obtenido
-FOLDERFORT_TOKEN = "312|QiTAhcxsVMmzJkUvbPQlBorcINER4TFBmpiv5PCUcf44574d"
-FOLDERFORT_EMAIL = "nadalpiantini@gmail.com"
-BASE_URL = "https://na3.folderfort.com"
+# Token y email desde entorno (evitar hardcodear)
+FOLDERFORT_TOKEN = os.getenv("FOLDERFORT_TOKEN", "")
+FOLDERFORT_EMAIL = os.getenv("FOLDERFORT_EMAIL", "")
+BASE_URL = os.getenv("FOLDERFORT_BASE_URL", "https://na3.folderfort.com")
+
+if not FOLDERFORT_TOKEN or not FOLDERFORT_EMAIL:
+    print("❌ Set FOLDERFORT_TOKEN and FOLDERFORT_EMAIL before running.")
+    raise SystemExit(1)
 
 print("🔧 Configurando Folderfort...")
 print(f"🎫 Token: {FOLDERFORT_TOKEN[:30]}...")

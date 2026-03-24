@@ -4,10 +4,15 @@ import sys
 sys.path.insert(0, '/Users/nadalpiantini/omnidrive-cli')
 
 from omnidrive.auth.folderfort import authenticate_folderfort
+import os
 
-# Credenciales
-email = "nadalpiantini@gmail.com"
-password = "Teclados#13f"
+# Credenciales via entorno (no hardcode)
+email = os.getenv("FOLDERFORT_EMAIL", "")
+password = os.getenv("FOLDERFORT_PASSWORD", "")
+
+if not email or not password:
+    print("❌ Set FOLDERFORT_EMAIL and FOLDERFORT_PASSWORD before running.")
+    sys.exit(1)
 
 # Autenticar
 try:

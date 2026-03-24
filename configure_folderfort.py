@@ -4,13 +4,17 @@ import json
 import os
 import requests
 
-# Token API de Folderfort
-FOLDERFORT_TOKEN = "311|oZQrBtxWdmY0fP8nEtxqtlZChJihMxoZ8z1DxkmZ1208e30c"
-FOLDERFORT_EMAIL = "nadalpiantini@gmail.com"
+# Token API de Folderfort (desde entorno)
+FOLDERFORT_TOKEN = os.getenv("FOLDERFORT_TOKEN", "")
+FOLDERFORT_EMAIL = os.getenv("FOLDERFORT_EMAIL", "")
 
 # Nota: La URL de la API puede ser na3 en lugar de na2
 BASE_URL_NA2 = "https://na2.folderfort.com"
 BASE_URL_NA3 = "https://na3.folderfort.com"
+
+if not FOLDERFORT_TOKEN or not FOLDERFORT_EMAIL:
+    print("❌ Set FOLDERFORT_TOKEN and FOLDERFORT_EMAIL before running.")
+    raise SystemExit(1)
 
 print("🔧 Configurando Folderfort...")
 print(f"📧 Email: {FOLDERFORT_EMAIL}")

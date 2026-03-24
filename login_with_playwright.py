@@ -8,8 +8,12 @@ import json
 import os
 from playwright.async_api import async_playwright
 
-EMAIL = "nadalpiantini@gmail.com"
-PASSWORD = "Teclados#13"
+EMAIL = os.getenv("FOLDERFORT_EMAIL", "")
+PASSWORD = os.getenv("FOLDERFORT_PASSWORD", "")
+
+if not EMAIL or not PASSWORD:
+    print("❌ Set FOLDERFORT_EMAIL and FOLDERFORT_PASSWORD before running.")
+    raise SystemExit(1)
 
 async def login_and_get_cookies():
     """Hacer login y obtener cookies"""

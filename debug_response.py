@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Investigar respuesta exacta del endpoint"""
 import requests
+import os
 
-TOKEN = "312|QiTAhcxsVMmzJkUvbPQlBorcINER4TFBmpiv5PCUcf44574d"
+TOKEN = os.getenv("FOLDERFORT_TOKEN", "")
 BASE_URL = "https://na3.folderfort.com"
+
+if not TOKEN:
+    print("❌ Set FOLDERFORT_TOKEN before running.")
+    raise SystemExit(1)
 
 print("🔍 Investigando respuesta de /drive/file-entries\n")
 

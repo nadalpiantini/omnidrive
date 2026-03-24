@@ -145,7 +145,8 @@ def detect_files_node(state: SyncState) -> SyncState:
         # Import service factory
         from ..services.factory import ServiceFactory
 
-        service = ServiceFactory.get_service(state['source_service'])
+        # Use the same factory method the CLI uses, with auto authentication
+        service = ServiceFactory.create_service(state['source_service'], auto_authenticate=True)
         files = service.list_files(limit=100)
 
         state['files_detected'] = files

@@ -61,7 +61,7 @@ Pasos:
 
 ### Folderfort
 - Email: nadalpiantini@gmail.com
-- Token: 312|QiTAhcxsVMmzJkUvbPQlBorcINER4TFBmpiv5PCUcf44574d
+- Token: <REDACTED>
 
 ### Google OAuth
 - Config en: ~/.omnidrive/oauth/

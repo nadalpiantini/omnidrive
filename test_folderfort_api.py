@@ -2,10 +2,15 @@
 """Test script para verificar la API de Folderfort"""
 import requests
 import json
+import os
 
 BASE_URL = "https://na2.folderfort.com"
-email = "nadalpiantini@gmail.com"
-password = "Teclados#13f"
+email = os.getenv("FOLDERFORT_EMAIL", "")
+password = os.getenv("FOLDERFORT_PASSWORD", "")
+
+if not email or not password:
+    print("❌ Set FOLDERFORT_EMAIL and FOLDERFORT_PASSWORD before running.")
+    raise SystemExit(1)
 
 print(f"🔍 Probando endpoint: {BASE_URL}/auth/login")
 print(f"📧 Email: {email}")

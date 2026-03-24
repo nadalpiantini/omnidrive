@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Investigar qué devuelve el endpoint de Folderfort"""
 import requests
+import os
 
-TOKEN = "311|oZQrBtxWdmY0fP8nEtxqtlZChJihMxoZ8z1DxkmZ1208e30c"
+TOKEN = os.getenv("FOLDERFORT_TOKEN", "")
 BASE_URL_NA3 = "https://na3.folderfort.com"
+
+if not TOKEN:
+    print("❌ Set FOLDERFORT_TOKEN before running.")
+    raise SystemExit(1)
 
 print("🔍 Investigando respuesta de Folderfort API...\n")
 

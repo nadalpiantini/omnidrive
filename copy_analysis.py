@@ -10,6 +10,7 @@ from omnidrive.services.google_drive import GoogleDriveService
 from omnidrive.services.folderfort import FolderfortService
 from omnidrive.config import load_config
 import json
+import os
 
 print("🔄 GOOGLE DRIVE → FOLDERFORT COPIA")
 print("=" * 60)
@@ -17,7 +18,11 @@ print()
 
 # Configuración
 GOOGLE_KEY_PATH = None  # Google Drive no está configurado aún
-FOLDERFORT_TOKEN = "312|QiTAhcxsVMmzJkUvbPQlBorcINER4TFBmpiv5PCUcf44574d"
+FOLDERFORT_TOKEN = os.getenv("FOLDERFORT_TOKEN", "")
+
+if not FOLDERFORT_TOKEN:
+    print("❌ Set FOLDERFORT_TOKEN before running.")
+    raise SystemExit(1)
 
 print("⚠️  NOTA IMPORTANTE:")
 print("   Google Drive no está configurado en este sistema.")
@@ -90,7 +95,7 @@ print("   from omnidrive.services.folderfort import FolderfortService")
 print("   ")
 print("   # Inicializar servicios")
 print("   google = GoogleDriveService()  # Requiere configuración previa")
-print("   folderfort = FolderfortService(token='312|QiTAhc...')")
+print("   folderfort = FolderfortService(token='<FOLDERFORT_TOKEN>')")
 print("   ")
 print("   # Listar archivos de Google")
 print("   google_files = google.list_files(limit=10000)")
