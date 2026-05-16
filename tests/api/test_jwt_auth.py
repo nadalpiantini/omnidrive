@@ -7,9 +7,8 @@ Tests for JWT authentication (F4-01).
   3. GET  /api/v1/auth/me    — valid token → 200 + user info
   4. GET  /api/v1/auth/me    — no token → 401
 """
-import sys
 import os
-import pytest
+import sys
 
 # Ensure the FastAPI app package is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../omnidrive-web/api/app"))

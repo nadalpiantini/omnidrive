@@ -1,6 +1,5 @@
 """Tests for the durable SyncJob in omnidrive.commands.sync."""
 import json
-from pathlib import Path
 
 import pytest
 
@@ -11,7 +10,6 @@ from omnidrive.commands.sync import (
     _deserialize,
     _serialize,
 )
-
 
 # ── Fixtures ─────────────────────────────────────────────────────────────
 
@@ -259,6 +257,7 @@ class TestResume:
 class TestSyncCLIResumeFlag:
     def test_sync_command_has_resume_option(self):
         from click.testing import CliRunner
+
         from omnidrive.cli import cli
 
         result = CliRunner().invoke(cli, ["sync", "--help"])
@@ -267,6 +266,7 @@ class TestSyncCLIResumeFlag:
 
     def test_sync_resume_no_previous_job(self, state_dir, monkeypatch):
         from click.testing import CliRunner
+
         from omnidrive.cli import cli
 
         monkeypatch.setattr(

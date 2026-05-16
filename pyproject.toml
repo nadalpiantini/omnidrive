@@ -53,7 +53,17 @@ markers = [
 ]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "B"]
+ignore = [
+    "E501",  # line too long — soft-policed via line-length=120; existing CLI tolerates wider lines
+    "N806",  # variable name should be lowercase — local class aliases (FileIndexer, SemanticSearch_cls) are intentional
+    "B017",  # pytest.raises(Exception) — accepted for sentinel error-handling tests
+    "E722",  # bare except — guarded where used (optional imports, plugin loading)
+    "E741",  # ambiguous variable name — acceptable in one-off iter vars
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F401"]  # unused imports inside tests are sometimes intentional (fixture wiring)

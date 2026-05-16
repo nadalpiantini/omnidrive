@@ -46,7 +46,7 @@ class TestVectorStore:
             if not store._chromadb_available:
                 try:
                     store.count()
-                    assert False, "Should have raised ImportError"
+                    raise AssertionError("Should have raised ImportError")
                 except ImportError:
                     pass  # Expected
             else:

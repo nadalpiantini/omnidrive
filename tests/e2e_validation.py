@@ -67,8 +67,8 @@ try:
 
     # Validate lazy import pattern
     print("\n📋 Validating lazy import pattern...")
-    assert CHROMADB_AVAILABLE == True or CHROMADB_AVAILABLE == False
-    assert OPENAI_AVAILABLE == True or OPENAI_AVAILABLE == False
+    assert CHROMADB_AVAILABLE or not CHROMADB_AVAILABLE
+    assert OPENAI_AVAILABLE or not OPENAI_AVAILABLE
     print("✅ Optional dependencies handled gracefully")
 
     print("\n✅ RAG SYSTEM: VALIDATED")

@@ -99,7 +99,7 @@ def create_backup_workflow() -> Workflow:
     return workflow.add_step(prepare).add_step(backup).add_step(verify)
 
 try:
-    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.checkpoint.memory import MemorySaver  # noqa: F401  (probed for availability)
     from langgraph.graph import END, StateGraph
     LANGGRAPH_AVAILABLE = True
 except ImportError:

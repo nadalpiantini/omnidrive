@@ -344,7 +344,7 @@ def sync(source, target, dry_run, limit, resume):
 
         click.echo(f"\n📋 Files to sync: {len(final.files)}")
         for fs in final.files:
-            icon = _get_file_icon(None)
+            _get_file_icon(None)
             status_icon = {"completed": "✓", "failed": "✗", "pending": "○"}.get(fs.status, "○")
             click.echo(f"  {status_icon} {fs.name}")
 
