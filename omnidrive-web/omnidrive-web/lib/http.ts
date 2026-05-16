@@ -1,5 +1,5 @@
 // HTTP client with axios
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
+import axios, { AxiosInstance } from 'axios'
 
 export const httpClient: AxiosInstance = axios.create({
   timeout: 30000,

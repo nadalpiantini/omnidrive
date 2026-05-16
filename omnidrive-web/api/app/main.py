@@ -2,16 +2,15 @@
 OmniDrive API - FastAPI Backend
 REST API and WebSocket server for OmniDrive web dashboard
 """
+import json
+import logging
+from contextlib import asynccontextmanager
+
+from api.routes import auth, files, search, sync, workflows
+from api.websocket.handler import ws_manager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.websockets import WebSocket, WebSocketDisconnect
-from contextlib import asynccontextmanager
-import logging
-from typing import List
-import json
-
-from api.routes import auth, files, sync, search, workflows
-from api.websocket.handler import ws_manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

@@ -10,20 +10,19 @@ export default function FilesPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const loadFiles = async () => {
+      setLoading(true)
+      try {
+        const response = await filesApi.list(selectedService)
+        setFiles(response.files)
+      } catch (error) {
+        console.error('Failed to load files:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
     loadFiles()
   }, [selectedService])
-
-  const loadFiles = async () => {
-    setLoading(true)
-    try {
-      const response = await filesApi.list(selectedService)
-      setFiles(response.files)
-    } catch (error) {
-      console.error('Failed to load files:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const getFileIcon = (mime_type?: string) => {
     if (!mime_type) return <FileIcon className="h-5 w-5 text-gray-400" />

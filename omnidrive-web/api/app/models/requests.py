@@ -1,8 +1,9 @@
 """
 Request models for API validation
 """
+from typing import Optional
+
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
 
 
 # Auth Models

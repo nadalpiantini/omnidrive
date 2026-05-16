@@ -2,25 +2,21 @@
 Workflow routes
 Handles workflow execution and management
 """
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
-import sys
 import os
+import sys
 import uuid
 from datetime import datetime
 
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 
-from omnidrive.workflows.graphs import get_workflow_engine
 from api.websocket.handler import ws_manager
 from auth.middleware import get_current_user
-
-from models.responses import (
-    WorkflowsListResponse,
-    WorkflowInfo,
-    WorkflowRunResponse,
-    WorkflowStatusResponse
-)
 from models.requests import WorkflowRunRequest
+from models.responses import WorkflowInfo, WorkflowRunResponse, WorkflowsListResponse, WorkflowStatusResponse
+
+from omnidrive.workflows.graphs import get_workflow_engine
 
 router = APIRouter()
 
@@ -49,7 +45,8 @@ async def list_workflows(user: dict = Depends(get_current_user)):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to list workflows: {str(e)}"
-        )
+        ) from e
+
 
 
 def run_workflow_job(job_id: str, workflow_name: str, parameters: dict = None):
@@ -140,7 +137,8 @@ async def run_workflow(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to run workflow: {str(e)}"
-        )
+        ) from e
+
 
 
 @router.get("/{name}/status/{job_id}", response_model=WorkflowStatusResponse)

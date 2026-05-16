@@ -63,6 +63,7 @@ ignore = [
     "B017",  # pytest.raises(Exception) — accepted for sentinel error-handling tests
     "E722",  # bare except — guarded where used (optional imports, plugin loading)
     "E741",  # ambiguous variable name — acceptable in one-off iter vars
+    "B008",  # function call in argument defaults — standard FastAPI Depends() pattern
 ]
 
 [tool.ruff.lint.per-file-ignores]

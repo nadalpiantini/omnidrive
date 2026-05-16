@@ -9,10 +9,9 @@ Usage::
     async def protected_route(user: dict = Depends(get_current_user)):
         ...
 """
+from auth.jwt import decode_token
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
-
-from auth.jwt import decode_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 

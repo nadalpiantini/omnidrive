@@ -39,7 +39,7 @@ export interface SearchResult {
   service: string
   relevance: number
   snippet?: string
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
 }
 
 // Auth API
@@ -154,7 +154,7 @@ export const searchApi = {
   },
 
   index: async (service: string, limit = 100) => {
-    const response = await httpClient.post(`${API_URL}/api/v1/index`, {
+    const response = await httpClient.post(`${API_URL}/api/v1/search/index`, {
       service,
       limit
     })
@@ -169,7 +169,7 @@ export const workflowsApi = {
     return response.data
   },
 
-  run: async (name: string, parameters?: Record<string, any>) => {
+  run: async (name: string, parameters?: Record<string, unknown>) => {
     const response = await httpClient.post(`${API_URL}/api/v1/workflows/${name}/run`, {
       parameters
     })

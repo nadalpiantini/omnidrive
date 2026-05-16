@@ -1,11 +1,11 @@
 // WebSocket client for real-time updates
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws'
 
 export type WSMessage = {
   type: string
-  data: any
+  data: Record<string, unknown>
 }
 
 export type WSListener = (message: WSMessage) => void
@@ -14,6 +14,7 @@ export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null)
   const listenersRef = useRef<Map<string, Set<WSListener>>>(new Map())
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const connectRef = useRef<(() => void) | null>(null)
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -30,7 +31,7 @@ export function useWebSocket() {
 
       ws.onmessage = (event) => {
         try {
-          const message: WSMessage = JSON.parse(event.data)
+          const message = JSON.parse(event.data) as WSMessage
           console.log('[WebSocket] Received:', message)
 
           // Notify all listeners
@@ -52,7 +53,7 @@ export function useWebSocket() {
         // Reconnect after 3 seconds
         reconnectTimeoutRef.current = setTimeout(() => {
           console.log('[WebSocket] Reconnecting...')
-          connect()
+          connectRef.current?.()
         }, 3000)
       }
 
@@ -63,6 +64,10 @@ export function useWebSocket() {
       console.error('[WebSocket] Failed to connect:', error)
     }
   }, [])
+
+  useEffect(() => {
+    connectRef.current = connect
+  }, [connect])
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -87,7 +92,7 @@ export function useWebSocket() {
     }
   }, [])
 
-  const send = useCallback((message: any) => {
+  const send = useCallback((message: unknown) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message))
     } else {
@@ -104,9 +109,18 @@ export function useWebSocket() {
     }
   }, [connect, disconnect])
 
+  const [isConnected, setIsConnected] = useState(false)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsConnected(wsRef.current?.readyState === WebSocket.OPEN)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
   return {
     send,
     subscribe,
-    connected: wsRef.current?.readyState === WebSocket.OPEN
+    connected: isConnected
   }
 }

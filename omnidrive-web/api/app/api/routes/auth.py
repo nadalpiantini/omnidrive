@@ -2,34 +2,41 @@
 Authentication routes
 Handles JWT login, user info, Google Drive and Folderfort authentication
 """
-from fastapi import APIRouter, HTTPException, Depends
-import sys
 import os
+import sys
+
+from fastapi import APIRouter, Depends, HTTPException
 
 # Add parent directory to path to import omnidrive modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 
-from omnidrive.auth import google as google_auth
-from omnidrive.auth import folderfort as folderfort_auth
-from omnidrive.config import load_config
-
-from models.responses import AuthResponse, AuthStatusResponse
-from models.requests import (
-    LoginRequest,
-    GoogleAuthRequest,
-    FolderfortAuthRequest,
-)
 from auth.jwt import create_access_token
 from auth.middleware import get_current_user
+from models.requests import (
+    FolderfortAuthRequest,
+    GoogleAuthRequest,
+    LoginRequest,
+)
+from models.responses import AuthResponse, AuthStatusResponse
+
+from omnidrive.auth import folderfort as folderfort_auth
+from omnidrive.auth import google as google_auth
+from omnidrive.config import load_config
 
 router = APIRouter()
 
-# ---------------------------------------------------------------------------
-# MVP hardcoded admin user — replace with real DB lookup later
-# ---------------------------------------------------------------------------
-_MVP_USERS = {
-    "admin@omnidrive.io": "admin123",
-}
+
+def _get_admin_credentials() -> tuple[str, str] | None:
+    """Return (email, password) from environment variables.
+
+    Expects OMNIDRIVE_ADMIN_EMAIL and OMNIDRIVE_ADMIN_PASSWORD.
+    Returns None if either is missing.
+    """
+    email = os.getenv("OMNIDRIVE_ADMIN_EMAIL", "").strip()
+    password = os.getenv("OMNIDRIVE_ADMIN_PASSWORD", "").strip()
+    if not email or not password:
+        return None
+    return email, password
 
 
 @router.post("/login")
@@ -37,10 +44,18 @@ async def login(request: LoginRequest):
     """
     Authenticate with email + password and return a JWT.
 
-    MVP: only the hardcoded admin user is accepted.
+    Credentials are read from OMNIDRIVE_ADMIN_EMAIL and
+    OMNIDRIVE_ADMIN_PASSWORD environment variables.
     """
-    stored_password = _MVP_USERS.get(request.email)
-    if stored_password is None or stored_password != request.password:
+    creds = _get_admin_credentials()
+    if creds is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Authentication not configured",
+        )
+
+    admin_email, admin_password = creds
+    if request.email != admin_email or request.password != admin_password:
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password",
@@ -118,7 +133,7 @@ async def authenticate_google(request: GoogleAuthRequest):
         raise HTTPException(
             status_code=400,
             detail=f"Google authentication failed: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/folderfort", response_model=AuthResponse)
@@ -146,7 +161,7 @@ async def authenticate_folderfort(request: FolderfortAuthRequest):
         raise HTTPException(
             status_code=400,
             detail=f"Folderfort authentication failed: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/logout")
@@ -167,4 +182,4 @@ async def logout():
         raise HTTPException(
             status_code=500,
             detail=f"Logout failed: {str(e)}"
-        )
+        ) from e

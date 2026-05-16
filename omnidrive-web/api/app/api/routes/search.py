@@ -2,18 +2,19 @@
 Semantic search routes
 Handles file indexing and semantic search using RAG
 """
-from fastapi import APIRouter, HTTPException, Depends
-import sys
 import os
+import sys
+
+from fastapi import APIRouter, Depends, HTTPException
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 
-from omnidrive.rag.indexer import SemanticSearch
-from omnidrive.rag.embeddings import EmbeddingsGenerator, OPENAI_AVAILABLE
 from auth.middleware import get_current_user
+from models.requests import IndexRequest, SearchRequest
+from models.responses import IndexResponse, SearchResponse, SearchResult
 
-from models.responses import SearchResponse, IndexResponse, SearchResult
-from models.requests import SearchRequest, IndexRequest
+from omnidrive.rag.embeddings import OPENAI_AVAILABLE
+from omnidrive.rag.indexer import SemanticSearch
 
 router = APIRouter()
 
@@ -75,7 +76,8 @@ async def semantic_search(
         raise HTTPException(
             status_code=500,
             detail=f"Search failed: {str(e)}"
-        )
+        ) from e
+
 
 
 @router.post("/index", response_model=IndexResponse)
@@ -106,4 +108,5 @@ async def index_files(
         raise HTTPException(
             status_code=500,
             detail=f"Indexing failed: {str(e)}"
-        )
+        ) from e
+

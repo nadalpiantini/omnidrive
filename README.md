@@ -1,221 +1,149 @@
-# OmniDrive CLI
+# OmniDrive
 
-A 360° Cloud Sync Solution - Unified command-line tool for managing multiple cloud storage services.
+Multi-cloud storage CLI and web dashboard for Google Drive and Folderfort.
 
-## ✨ Features
+## What Works Now
 
-- 🔐 **Secure Authentication** - OAuth2 flows for all services
-- 📁 **Multi-Cloud Support** - Google Drive, Folderfort, and more
-- 🔄 **Sync Capabilities** - Transfer files between cloud services
-- 🔍 **Semantic Search** - Search within file contents (RAG)
-- 🤖 **Automated Workflows** - Workflow automation system
-- 💾 **Persistent Memory** - Session continuity across runs
-- 📊 **Smart Comparison** - Compare files between services
+- **CLI**: list, upload, download, delete, sync, compare across Google Drive and Folderfort
+- **Web dashboard**: browse files, upload, sync, view auth status (Next.js + FastAPI backend)
+- **Desktop app**: Electron wrapper around the web dashboard (builds successfully)
+- **API**: FastAPI backend with JWT auth, file operations, sync jobs
 
-## 🚀 Quick Start
+## Known Limitations
+
+- **Semantic search indexing**: Not yet implemented. The search API exists but requires an indexing pipeline that is still in development.
+- **Workflows**: LangGraph integration is stubbed; workflows are defined but not fully wired to execution.
+- **Real-time sync**: No automatic/background sync. Sync is manual via CLI or dashboard.
+- **OneDrive/Dropbox**: Not implemented (placeholder only).
+- **Coverage**: ~40% test coverage. Core config, auth, and services have tests; integration coverage is thin.
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+ (for web/dashboard)
+- Google Drive service account JSON
+- Folderfort account credentials
+
+### Backend
 
 ```bash
-# Clone and install
-git clone https://github.com/yourusername/omnidrive-cli.git
-cd omnidrive-cli
+# Install Python dependencies
 pip install -r requirements.txt
 
-# Authenticate
-python3 -m omnidrive auth google
-python3 -m omnidrive auth folderfort
+# Set required environment variables
+export OMNIDRIVE_JWT_SECRET="your-random-secret-min-32-chars"
+export OMNIDRIVE_ADMIN_EMAIL="admin@example.com"
+export OMNIDRIVE_ADMIN_PASSWORD="your-admin-password"
+export GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'
+export FOLDERFORT_EMAIL="your@email.com"
+export FOLDERFORT_PASSWORD="your-password"
 
-# List files
-python3 -m omnidrive list --drive google
-python3 -m omnidrive list --drive folderfort
-
-# Upload files
-python3 -m omnidrive upload myfile.txt google
-
-# Sync between services
-python3 -m omnidrive sync google folderfort
-
-# Semantic search
-export DEEPSEEK_API_KEY='your-key'
-python3 -m omnidrive index google
-python3 -m omnidrive search "important documents"
+# Start the API
+cd omnidrive-web/api && uvicorn app.main:app --reload
 ```
 
-## 📖 Commands
+### Web Dashboard
 
-### Authentication
 ```bash
-omnidrive auth <service>     # Authenticate with a service
+cd omnidrive-web/omnidrive-web
+# Copy and fill environment variables
+cp .env.example .env.local
+# Edit .env.local with your API URL
+
+npm install
+npm run dev
 ```
 
-### File Operations
+### Desktop App
+
 ```bash
-omnidrive list [--drive SERVICE] [--limit N]      # List files
-omnidrive upload <file> <service>                 # Upload file
-omnidrive download <drive> <file_id> [--dest PATH]  # Download file by ID
-omnidrive delete <drive> <file_id> [--permanent]  # Delete file (trash or permanent)
-omnidrive create-folder <drive> <name> [--parent-id ID]  # Create new folder
+cd omnidrive-desktop
+npm install
+npm run build
+# Output: release/OmniDrive-1.0.0-arm64-mac.zip
 ```
 
-### Multi-Cloud Operations
+## Testing
+
 ```bash
-omnidrive sync <source> <target> [--dry-run]  # Sync between drives
-omnidrive compare <service1> <service2>        # Compare services
+# Python tests
+pytest tests/ -v
+
+# Python linting
+ruff check omnidrive/ tests/ omnidrive-web/api/app
+
+# Web lint
+npm --prefix omnidrive-web/omnidrive-web run lint
+
+# Web build
+npm --prefix omnidrive-web/omnidrive-web run build
+
+# Desktop build
+npm --prefix omnidrive-desktop run build
 ```
 
-### RAG Search (Phase 3)
-```bash
-omnidrive index <service>           # Index files for search
-omnidrive search "<query>"          # Semantic search
-```
-
-### Workflows (Phase 4)
-```bash
-omnidrive workflow list             # List available workflows
-omnidrive workflow run <name>        # Run a workflow
-```
-
-### Session Management
-```bash
-omnidrive session save <name>        # Save session state
-omnidrive session resume <name>      # Resume saved session
-omnidrive session list              # List all sessions
-```
-
-## 🏗️ Architecture
+## Architecture
 
 ```
 omnidrive/
-├── cli.py                    # Main CLI entry point
+├── cli.py                    # CLI entry point
 ├── config.py                 # Configuration management
 ├── services/                 # Cloud service implementations
 │   ├── base.py              # CloudService abstract base
 │   ├── google_drive.py      # Google Drive
 │   └── folderfort.py        # Folderfort
 ├── auth/                     # Authentication modules
-│   ├── google.py            # Google OAuth
-│   └── folderfort.py        # Folderfort auth
-├── rag/                      # RAG system
-│   ├── embeddings.py        # DeepSeek embeddings
-│   ├── vector_store.py      # ChromaDB vector store
-│   └── indexer.py           # File indexer
-├── memory/                   # Persistent memory
-│   └── serena_client.py     # Memory manager
-└── workflows/                # Workflows
-    └── graphs.py            # Workflow engine
+│   ├── google.py
+│   └── folderfort.py
+├── rag/                      # RAG system (partial)
+│   ├── embeddings.py
+│   ├── vector_store.py
+│   └── indexer.py
+├── memory/                   # Session persistence
+│   └── serena_client.py
+└── workflows/                # Workflow engine (stubbed)
+    └── graphs.py
+
+omnidrive-web/
+├── api/app/                  # FastAPI backend
+│   ├── api/routes/          # Auth, files, sync, search
+│   ├── auth/jwt.py          # JWT utilities
+│   └── main.py
+└── omnidrive-web/           # Next.js frontend
+    ├── app/dashboard/       # Files, upload, sync, search pages
+    ├── lib/api.ts           # API client
+    └── lib/websocket.ts     # Real-time updates
+
+omnidrive-desktop/
+├── electron/main.ts         # Electron main process
+├── package.json             # Electron builder config
+└── dist-electron/           # Build output
 ```
 
-## 📊 Development Status
+## Environment Variables
 
-| Phase | Status | Features |
-|-------|--------|----------|
-| **Phase 0** | ✅ Complete | Modular architecture, refactored CLI |
-| **Phase 1** | ✅ Complete | Folderfort integration, authentication |
-| **Phase 2** | ✅ Complete | Upload, sync, compare commands |
-| **Phase 3** | ✅ Complete | RAG system with DeepSeek + ChromaDB |
-| **Phase 4** | ✅ Complete | Workflow automation engine |
-| **Phase 5** | ✅ Complete | Testing, documentation, production-ready |
+See `.env.omnidrive.template` for the full list. The most important ones:
 
-## 🧪 Testing
+| Variable | Required For | Description |
+|----------|-------------|-------------|
+| `OMNIDRIVE_JWT_SECRET` | Web API | Signing key for JWT tokens (min 32 chars) |
+| `OMNIDRIVE_ADMIN_EMAIL` | Web API | Admin login email |
+| `OMNIDRIVE_ADMIN_PASSWORD` | Web API | Admin login password |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Google Drive | Service account JSON (single-line) |
+| `FOLDERFORT_EMAIL` | Folderfort | Login email |
+| `FOLDERFORT_PASSWORD` | Folderfort | Login password |
+| `NEXT_PUBLIC_API_URL` | Web frontend | Backend URL (e.g. http://localhost:8000) |
+| `NEXT_PUBLIC_WS_URL` | Web frontend | WebSocket URL |
 
-```bash
-# Run all tests
-pytest tests/ -v
+## Security Notes
 
-# With coverage
-pytest tests/ --cov=omnidrive --cov-report=html
+- JWT secret must be strong and unique per deployment
+- Admin credentials are read from environment variables only (no hardcoded defaults in production)
+- Google service account JSON is stored in config; handle it as a credential
+- Folderfort password is exchanged for a token on auth; token is stored, password is not
 
-# Specific test files
-pytest tests/test_folderfort.py -v
-pytest tests/test_workflows.py -v
-```
+## License
 
-**Coverage**: 37% (45+ tests passing)
-
-## 📦 Installation
-
-### From PyPI (Coming Soon)
-```bash
-pip install omnidrive-cli
-```
-
-### From Source
-```bash
-git clone https://github.com/yourusername/omnidrive-cli.git
-cd omnidrive-cli
-pip install -r requirements.txt
-```
-
-## ⚙️ Configuration
-
-Configuration is stored in `~/.omnidrive/`:
-
-```json
-{
-  "google_key_path": "/path/to/service-account.json",
-  "folderfort_token": "your_token_here",
-  "folderfort_email": "your@email.com"
-}
-```
-
-### Environment Variables
-
-```bash
-# Google Drive
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/key.json"
-
-# DeepSeek (for RAG features)
-export DEEPSEEK_API_KEY="your-deepseek-key"
-
-# Optional: Set custom paths
-export OMNIDRIVE_CONFIG_DIR="~/.omnidrive"
-export OMNIDRIVE_MEMORY_DIR="~/.omnidrive/memory"
-```
-
-## 📚 Supported Services
-
-| Service | Status | Features |
-|---------|--------|----------|
-| **Google Drive** | ✅ Full | List, upload, download, delete, create folder |
-| **Folderfort** | ✅ Full | List, upload, download, delete, create folder |
-| **OneDrive** | 📋 Planned | Phase 2+ |
-| **Dropbox** | 📋 Planned | Phase 2+ |
-
-## 🔒 Security
-
-- OAuth2 authentication for all services
-- Credentials stored locally in `~/.omnidrive/`
-- No sensitive data transmitted to third parties
-- Secure token management with automatic refresh
-
-## 🤝 Contributing
-
-We welcome contributions! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with tests
-4. Submit a pull request
-
-See `CLAUDE.md` for development guidelines.
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 🙏 Acknowledgments
-
-- **Google Drive API** - For robust Python SDK
-- **Folderfort** - For cloud storage API
-- **DeepSeek** - For embeddings API
-- **ChromaDB** - For vector database
-- **Click** - For beautiful CLI framework
-- **LangGraph** - For workflow orchestration
-
-## 📞 Support
-
-- Issues: [GitHub Issues](https://github.com/yourusername/omnidrive-cli/issues)
-- Docs: [Full Documentation](https://omnidrive-cli.readthedocs.io)
-
----
-
-**Built with ❤️ by the OmniDrive Team**
+MIT

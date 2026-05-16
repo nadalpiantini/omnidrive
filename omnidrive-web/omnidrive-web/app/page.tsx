@@ -10,7 +10,7 @@ type AuthStatus = {
   folderfort_email: string | null
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
 export default function HomePage() {
   const [status, setStatus] = useState<AuthStatus | null>(null)
@@ -19,7 +19,7 @@ export default function HomePage() {
 
   useEffect(() => {
     let cancelled = false
-    fetch(`${API_BASE}/api/v1/auth/status`, { cache: 'no-store' })
+    fetch(`${API_URL}/api/v1/auth/status`, { cache: 'no-store' })
       .then((res) => {
         if (!res.ok) throw new Error(`API ${res.status}`)
         return res.json()
@@ -59,13 +59,13 @@ export default function HomePage() {
           <div className="max-w-xl mx-auto mb-8">
             {loading && (
               <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                Checking backend at {API_BASE}…
+                Checking backend at {API_URL}…
               </div>
             )}
             {!loading && error && (
               <div className="rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-900 dark:text-amber-200 text-left">
                 <div className="font-semibold mb-1">Backend not reachable ({error}).</div>
-                <div className="font-mono text-xs mb-1">{API_BASE}/api/v1/auth/status</div>
+                <div className="font-mono text-xs mb-1">{API_URL}/api/v1/auth/status</div>
                 <div>
                   Start the API:{' '}
                   <code className="font-mono bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded">

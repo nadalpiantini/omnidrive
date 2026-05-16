@@ -29,8 +29,18 @@ jobs:
           pip install ruff pytest pytest-timeout
 
       - name: Lint with ruff
-        run: ruff check omnidrive/ tests/
+        run: ruff check omnidrive/ tests/ omnidrive-web/api/app
+
+      - name: Type check API
+        run: |
+          cd omnidrive-web/api
+          python -m mypy app --ignore-missing-imports || true
 
       - name: Run tests
         run: pytest tests/ -v --tb=short
+
+      - name: Test API imports
+        run: |
+          cd omnidrive-web/api
+          python -c "from app.main import app; print('API imports OK')"
 

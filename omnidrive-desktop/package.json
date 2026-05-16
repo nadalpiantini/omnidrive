@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "description": "OmniDrive Desktop - Visual interface for multi-cloud file management",
   "main": "dist-electron/main.js",
+  "author": "OmniDrive <openclawmasters@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclawmasters/omnidrive-cli.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
@@ -42,10 +47,11 @@
     "directories": {
       "output": "release"
     },
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false,
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
-        "dmg",
         "zip"
       ]
     },

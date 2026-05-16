@@ -1,12 +1,17 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { authApi, filesApi, type FileMetadata } from '@/lib/api'
+import { authApi, filesApi } from '@/lib/api'
 import { Cloud, Folder, HardDrive, RefreshCw, Search, Upload } from 'lucide-react'
 import Link from 'next/link'
 
+interface AuthStatus {
+  google_authenticated?: boolean
+  folderfort_authenticated?: boolean
+}
+
 export default function DashboardPage() {
-  const [authStatus, setAuthStatus] = useState<any>(null)
+  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [stats, setStats] = useState({
     googleFiles: 0,
     folderfortFiles: 0,

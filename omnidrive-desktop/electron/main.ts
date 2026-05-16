@@ -1,15 +1,33 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { spawn } from 'child_process'
 import path from 'path'
+import fs from 'fs'
 
-// Resolve CLI: bundled in resources, or fall back to PATH
+// Resolve CLI path relative to this file instead of hardcoding HOME
 const isDev = !!process.env.VITE_DEV_SERVER_URL
 const OMNIDRIVE_CLI = isDev
-  ? path.join(process.env.HOME || '', 'Dev/omnidrive-cli')
+  ? path.resolve(__dirname, '..', '..')
   : process.resourcesPath
-const PYTHON_PATH = isDev
-  ? path.join(OMNIDRIVE_CLI, '.venv/bin/python3')
-  : path.join(OMNIDRIVE_CLI, 'python', 'bin', 'python3')
+
+function findPython(): string {
+  const candidates = [
+    'python3',
+    process.platform === 'win32' ? 'python.exe' : 'python',
+    path.join(OMNIDRIVE_CLI, '.venv', 'bin', 'python3'),
+    path.join(OMNIDRIVE_CLI, '.venv', 'Scripts', 'python.exe'),
+  ]
+  for (const candidate of candidates) {
+    if (candidate === 'python3' || candidate === 'python' || candidate === 'python.exe') {
+      return candidate
+    }
+    if (fs.existsSync(candidate)) {
+      return candidate
+    }
+  }
+  return 'python3'
+}
+
+const PYTHON_PATH = findPython()
 
 let mainWindow: BrowserWindow | null = null
 

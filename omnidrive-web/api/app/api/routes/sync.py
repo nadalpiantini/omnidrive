@@ -2,22 +2,24 @@
 Sync routes
 Handles cross-service synchronization and comparison
 """
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
-import sys
 import os
+import sys
 import tempfile
 import uuid
+from datetime import datetime
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 
-from omnidrive.services.google_drive import GoogleDriveService
-from omnidrive.services.folderfort import FolderfortService
-from omnidrive.auth import google as google_auth
-from omnidrive.auth import folderfort as folderfort_auth
 from auth.middleware import get_current_user
+from models.requests import CompareRequest, SyncRequest
+from models.responses import CompareResponse, SyncJobResponse, SyncResponse
 
-from models.responses import SyncResponse, SyncJobResponse, CompareResponse
-from models.requests import SyncRequest, CompareRequest
+from omnidrive.auth import folderfort as folderfort_auth
+from omnidrive.auth import google as google_auth
+from omnidrive.services.folderfort import FolderfortService
+from omnidrive.services.google_drive import GoogleDriveService
 
 router = APIRouter()
 
@@ -82,12 +84,12 @@ async def compare_services(
         raise HTTPException(
             status_code=500,
             detail=f"Comparison failed: {str(e)}"
-        )
+        ) from e
+
 
 
 def run_sync_job(job_id: str, source: str, target: str, limit: int):
     """Background task to run sync"""
-    import asyncio
 
     try:
         sync_jobs[job_id]["status"] = "running"
@@ -109,7 +111,7 @@ def run_sync_job(job_id: str, source: str, target: str, limit: int):
         sync_jobs[job_id]["files_to_sync"] = len(files_to_sync)
 
         # Sync files
-        for file_name, file_data in files_to_sync.items():
+        for _file_name, file_data in files_to_sync.items():
             # Download from source
             with tempfile.NamedTemporaryFile(delete=False) as tmp:
                 source_service.download_file(file_data['id'], tmp.name)
@@ -134,8 +136,6 @@ async def sync_services(
     user: dict = Depends(get_current_user),
 ):
     """Sync files from source service to target service"""
-    from datetime import datetime
-
     try:
         if request.source == request.target:
             raise HTTPException(status_code=400, detail="Source and target must be different")
@@ -194,7 +194,8 @@ async def sync_services(
         raise HTTPException(
             status_code=500,
             detail=f"Sync failed: {str(e)}"
-        )
+        ) from e
+
 
 
 @router.get("/status/{job_id}", response_model=SyncJobResponse)

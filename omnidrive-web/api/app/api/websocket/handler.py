@@ -1,8 +1,9 @@
 """WebSocket connection manager"""
-from fastapi import WebSocket
-from typing import List, Dict
 import json
 import logging
+from typing import Dict, List
+
+from fastapi import WebSocket
 
 logger = logging.getLogger(__name__)
 

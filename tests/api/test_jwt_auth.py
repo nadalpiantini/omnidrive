@@ -13,6 +13,7 @@ import sys
 # Ensure the FastAPI app package is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../omnidrive-web/api/app"))
 
+import pytest
 from fastapi.testclient import TestClient
 from main import app  # noqa: E402
 
@@ -22,6 +23,15 @@ client = TestClient(app)
 
 _VALID_CREDENTIALS = {"email": "admin@omnidrive.io", "password": "admin123"}
 _BAD_PASSWORD = {"email": "admin@omnidrive.io", "password": "wrong"}
+
+
+@pytest.fixture(autouse=True)
+def setup_auth_env(monkeypatch):
+    """Set required auth environment variables for tests."""
+    monkeypatch.setenv("OMNIDRIVE_ADMIN_EMAIL", _VALID_CREDENTIALS["email"])
+    monkeypatch.setenv("OMNIDRIVE_ADMIN_PASSWORD", _VALID_CREDENTIALS["password"])
+    monkeypatch.setenv("OMNIDRIVE_JWT_SECRET", "test-secret-do-not-use-in-production")
+    monkeypatch.setenv("ENVIRONMENT", "development")
 
 
 def _get_token() -> str:
@@ -52,6 +62,13 @@ class TestLogin:
         """Wrong password returns 401."""
         resp = client.post("/api/v1/auth/login", json=_BAD_PASSWORD)
         assert resp.status_code == 401
+
+    def test_login_unconfigured(self, monkeypatch):
+        """Missing env credentials return 503."""
+        monkeypatch.delenv("OMNIDRIVE_ADMIN_EMAIL", raising=False)
+        monkeypatch.delenv("OMNIDRIVE_ADMIN_PASSWORD", raising=False)
+        resp = client.post("/api/v1/auth/login", json=_VALID_CREDENTIALS)
+        assert resp.status_code == 503
 
 
 class TestMe:

@@ -4,12 +4,12 @@ JWT token creation and validation for OmniDrive API.
 Uses python-jose with HS256. Secret comes from OMNIDRIVE_JWT_SECRET
 environment variable (falls back to a dev value with a WARNING).
 """
-import os
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 
-from jose import JWTError, jwt
 from fastapi import HTTPException, status
+from jose import JWTError, jwt
 
 logger = logging.getLogger(__name__)
 
@@ -20,18 +20,28 @@ _DEV_SECRET = "change-me-in-prod"
 def _get_secret() -> str:
     """Return the JWT signing secret.
 
-    Reads ``OMNIDRIVE_JWT_SECRET`` from the environment.  If the variable is
-    not set (or is empty) a hard-coded dev fallback is used **and a warning is
-    emitted** so that it never silently ships to production.
+    Reads ``OMNIDRIVE_JWT_SECRET`` from the environment.
+    In development mode (ENVIRONMENT=development or NODE_ENV=development)
+    a hard-coded dev fallback is used with a loud warning.
+    In any other environment the function raises RuntimeError to prevent
+    silent deployment with an insecure secret.
     """
     secret = os.getenv("OMNIDRIVE_JWT_SECRET", "").strip()
-    if not secret:
+    if secret:
+        return secret
+
+    env = os.getenv("ENVIRONMENT", os.getenv("NODE_ENV", "")).strip().lower()
+    if env == "development":
         logger.warning(
-            "⚠️  OMNIDRIVE_JWT_SECRET not set — using insecure dev fallback. "
-            "Set the env var in production!"
+            "OMNIDRIVE_JWT_SECRET not set — using insecure dev fallback. "
+            "Set the env var before deploying to production!"
         )
-        secret = _DEV_SECRET
-    return secret
+        return _DEV_SECRET
+
+    raise RuntimeError(
+        "OMNIDRIVE_JWT_SECRET is not set and ENVIRONMENT is not 'development'. "
+        "Set the OMNIDRIVE_JWT_SECRET environment variable to start the API."
+    )
 
 
 def create_access_token(subject: str, expires_minutes: int = 60) -> str:

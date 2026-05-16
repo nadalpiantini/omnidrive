@@ -2,32 +2,21 @@
 File operation routes
 Handles file listing, upload, download, delete
 """
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
-from typing import List
-import sys
 import os
+import sys
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 # Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 
-from omnidrive.services.google_drive import GoogleDriveService
-from omnidrive.services.folderfort import FolderfortService
-from omnidrive.auth import google as google_auth
-from omnidrive.auth import folderfort as folderfort_auth
 from auth.middleware import get_current_user
+from models.responses import FileDownloadResponse, FileListResponse, FileMetadata, FileUploadResponse
 
-from models.responses import (
-    FileListResponse,
-    FileMetadata,
-    FileUploadResponse,
-    FileDownloadResponse
-)
-from models.requests import (
-    FileListRequest,
-    FileUploadRequest,
-    FileDownloadRequest,
-    FileDeleteRequest
-)
+from omnidrive.auth import folderfort as folderfort_auth
+from omnidrive.auth import google as google_auth
+from omnidrive.services.folderfort import FolderfortService
+from omnidrive.services.google_drive import GoogleDriveService
 
 router = APIRouter()
 
@@ -85,7 +74,8 @@ async def list_files(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to list files: {str(e)}"
-        )
+        ) from e
+
 
 
 @router.post("/upload", response_model=FileUploadResponse)
@@ -97,6 +87,7 @@ async def upload_file(
 ):
     """Upload a file to cloud storage"""
     import tempfile
+
     from api.websocket.handler import ws_manager
 
     try:
@@ -139,7 +130,8 @@ async def upload_file(
         raise HTTPException(
             status_code=500,
             detail=f"Upload failed: {str(e)}"
-        )
+        ) from e
+
 
 
 @router.get("/{file_id}/download", response_model=FileDownloadResponse)
@@ -149,7 +141,6 @@ async def download_file(
     user: dict = Depends(get_current_user),
 ):
     """Download a file from cloud storage"""
-    import tempfile
     import uuid
 
     try:
@@ -164,7 +155,7 @@ async def download_file(
         # Return file info (actual file streaming handled separately)
         return FileDownloadResponse(
             success=True,
-            message=f"File downloaded successfully",
+            message="File downloaded successfully",
             file_path=downloaded_path
         )
 
@@ -172,7 +163,8 @@ async def download_file(
         raise HTTPException(
             status_code=500,
             detail=f"Download failed: {str(e)}"
-        )
+        ) from e
+
 
 
 @router.delete("/{file_id}")
@@ -204,4 +196,5 @@ async def delete_file(
         raise HTTPException(
             status_code=500,
             detail=f"Delete failed: {str(e)}"
-        )
+        ) from e
+
