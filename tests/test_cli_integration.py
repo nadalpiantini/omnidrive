@@ -18,14 +18,19 @@ class TestListCommandIntegration:
         """Test list command prompts for authentication when not authenticated."""
         runner = CliRunner()
 
-        # Mock google_auth to check authentication
-        with patch('omnidrive.cli.google_auth.is_google_authenticated', return_value=False):
-            with patch('omnidrive.cli.click.confirm', return_value=True):
-                with patch('omnidrive.cli._authenticate_service') as mock_auth:
-                    runner.invoke(cli, ['list', '--drive', 'google'])
+        # ServiceFactory.create_service runs at the top of list() before the
+        # auth check — mock it so creation doesn't crash on missing creds in
+        # a fresh environment (CI, container, dev box without Google config).
+        mock_service = Mock()
+        mock_service.list_files.return_value = []
 
-                    # Should prompt for authentication
-                    mock_auth.assert_called_once_with('google')
+        with patch('omnidrive.cli.ServiceFactory.create_service', return_value=mock_service), \
+             patch('omnidrive.cli.google_auth.is_google_authenticated', return_value=False), \
+             patch('omnidrive.cli.click.confirm', return_value=True), \
+             patch('omnidrive.cli._authenticate_service') as mock_auth:
+            runner.invoke(cli, ['list', '--drive', 'google'])
+
+            mock_auth.assert_called_once_with('google')
 
     def test_list_google_with_authenticated_service(self):
         """Test list command with authenticated service."""
@@ -38,7 +43,8 @@ class TestListCommandIntegration:
             {'id': '1', 'name': 'test.txt', 'mimeType': 'text/plain', 'size': 1024}
         ]
 
-        with patch('omnidrive.cli.ServiceFactory.create_service', return_value=mock_service):
+        with patch('omnidrive.cli.google_auth.is_google_authenticated', return_value=True), \
+             patch('omnidrive.cli.ServiceFactory.create_service', return_value=mock_service):
             result = runner.invoke(cli, ['list', '--drive', 'google'])
 
             # Should list files successfully
@@ -54,7 +60,8 @@ class TestListCommandIntegration:
         mock_service.is_authenticated.return_value = True
         mock_service.list_files.return_value = []
 
-        with patch('omnidrive.cli.ServiceFactory.create_service', return_value=mock_service):
+        with patch('omnidrive.cli.google_auth.is_google_authenticated', return_value=True), \
+             patch('omnidrive.cli.ServiceFactory.create_service', return_value=mock_service):
             result = runner.invoke(cli, ['list', '--drive', 'google'])
 
             assert result.exit_code == 0
@@ -68,7 +75,8 @@ class TestListCommandIntegration:
         mock_service.is_authenticated.return_value = True
         mock_service.list_files.side_effect = ServiceError("API Error")
 
-        with patch('omnidrive.cli.ServiceFactory.create_service', return_value=mock_service):
+        with patch('omnidrive.cli.google_auth.is_google_authenticated', return_value=True), \
+             patch('omnidrive.cli.ServiceFactory.create_service', return_value=mock_service):
             result = runner.invoke(cli, ['list', '--drive', 'google'])
 
             # Click catches exceptions by default, so exit_code is 0 but error is in output
