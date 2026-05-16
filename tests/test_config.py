@@ -2,14 +2,15 @@
 Tests for configuration management.
 """
 import os
-import json
+
 import pytest
+
 from omnidrive.config import (
+    CONFIG_PATH,
+    get_config_value,
     load_config,
     save_config,
-    get_config_value,
     set_config_value,
-    CONFIG_PATH
 )
 
 

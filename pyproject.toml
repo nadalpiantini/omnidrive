@@ -1,36 +1,69 @@
-[tool.poetry]
+[project]
 name = "omnidrive-cli"
-version = "1.0.0"
+version = "0.1.0"
 description = "A 360° Cloud Sync Solution - Unified CLI for multiple cloud storage services"
-authors = ["OmniDrive Team"]
+authors = [{name = "OmniDrive Team"}]
 readme = "README.md"
-packages = [{include = "omnidrive"}]
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "click>=8.1",
+    "python-dotenv>=1.0",
+    "google-api-python-client>=2.100",
+    "google-auth-oauthlib>=1.1",
+    "tqdm>=4.66",
+    "pydantic>=2.0",
+    "requests>=2.31",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-click = "^8.1"
-python-dotenv = "^1.0"
-google-api-python-client = "^2.100"
-google-auth-oauthlib = "^1.1"
-tqdm = "^4.66"
-pydantic = "^2.0"
-requests = "^2.31"
+[project.optional-dependencies]
+rag = [
+    "openai>=1.0",
+    "sentence-transformers>=2.2",
+    "chromadb>=0.4,<2.0",
+    "pypdf>=3.17",
+    "python-docx>=1.1",
+    "tiktoken>=0.5",
+]
+workflows = [
+    "langgraph>=0.2",
+    "langchain>=0.3",
+    "langchain-openai>=0.2",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1",
+]
 
-[tool.poetry.scripts]
+[project.scripts]
 omnidrive = "omnidrive.cli:cli"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["omnidrive*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
-
-[tool.black]
-line-length = 100
-target-version = ['py310']
+markers = [
+    "e2e: end-to-end smoke tests that exercise the CLI binary via subprocess",
+]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "B"]
+ignore = [
+    "E501",  # line too long — soft-policed via line-length=120; existing CLI tolerates wider lines
+    "N806",  # variable name should be lowercase — local class aliases (FileIndexer, SemanticSearch_cls) are intentional
+    "B017",  # pytest.raises(Exception) — accepted for sentinel error-handling tests
+    "E722",  # bare except — guarded where used (optional imports, plugin loading)
+    "E741",  # ambiguous variable name — acceptable in one-off iter vars
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F401"]  # unused imports inside tests are sometimes intentional (fixture wiring)

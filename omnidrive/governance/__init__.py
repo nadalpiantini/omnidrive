@@ -9,7 +9,7 @@ Integrates with OpenClaw's Frontier Pack for enterprise governance:
 - agent_evaluator: Output quality scoring
 """
 
-from .decorators import audit_log, require_approval, check_confidence
+from .decorators import audit_log, check_confidence, require_approval
 from .frontier_bridge import FrontierBridge
 
 __all__ = [

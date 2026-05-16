@@ -1,11 +1,13 @@
 """
 Tests for RAG system (embeddings, vector store, indexer).
 """
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import Mock, patch
+
 from omnidrive.rag.embeddings import EmbeddingsGenerator
-from omnidrive.rag.vector_store import VectorStore
 from omnidrive.rag.indexer import FileIndexer, SemanticSearch
+from omnidrive.rag.vector_store import VectorStore
 
 
 class TestEmbeddingsGenerator:
@@ -44,7 +46,7 @@ class TestVectorStore:
             if not store._chromadb_available:
                 try:
                     store.count()
-                    assert False, "Should have raised ImportError"
+                    raise AssertionError("Should have raised ImportError")
                 except ImportError:
                     pass  # Expected
             else:
@@ -66,8 +68,8 @@ class TestFileIndexer:
 
     def test_extract_text_txt(self):
         """Test extracting text from .txt files."""
-        import tempfile
         import os
+        import tempfile
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
             f.write("Test content")
@@ -84,8 +86,8 @@ class TestFileIndexer:
 
     def test_extract_text_unsupported(self):
         """Test extracting text from unsupported file types."""
-        import tempfile
         import os
+        import tempfile
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.xyz', delete=False) as f:
             f.write("Test content")

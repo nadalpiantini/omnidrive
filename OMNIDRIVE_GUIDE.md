@@ -108,7 +108,7 @@ python3 -m omnidrive workflow run smart-sync
 
 ### ✅ Folderfort (CONFIGURADO)
 - **Tipo:** Personal Access Token
-- **Valor:** `312|QiTAhc...`
+- **Valor:** `<FOLDERFORT_TOKEN>`
 - **Ubicación:** `~/.omnidrive/config.json`
 
 ### ⏳ Google Drive (OPCIONAL)

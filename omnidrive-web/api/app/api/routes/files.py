@@ -2,7 +2,7 @@
 File operation routes
 Handles file listing, upload, download, delete
 """
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 from typing import List
 import sys
 import os
@@ -14,6 +14,7 @@ from omnidrive.services.google_drive import GoogleDriveService
 from omnidrive.services.folderfort import FolderfortService
 from omnidrive.auth import google as google_auth
 from omnidrive.auth import folderfort as folderfort_auth
+from auth.middleware import get_current_user
 
 from models.responses import (
     FileListResponse,
@@ -49,7 +50,12 @@ def get_service(service_name: str):
 
 
 @router.get("/", response_model=FileListResponse)
-async def list_files(service: str, folder_id: str = None, limit: int = 100):
+async def list_files(
+    service: str,
+    folder_id: str = None,
+    limit: int = 100,
+    user: dict = Depends(get_current_user),
+):
     """List files from a cloud storage service"""
     try:
         service_instance = get_service(service)
@@ -86,7 +92,8 @@ async def list_files(service: str, folder_id: str = None, limit: int = 100):
 async def upload_file(
     file: UploadFile = File(...),
     service: str = "google",
-    parent_id: str = None
+    parent_id: str = None,
+    user: dict = Depends(get_current_user),
 ):
     """Upload a file to cloud storage"""
     import tempfile
@@ -136,7 +143,11 @@ async def upload_file(
 
 
 @router.get("/{file_id}/download", response_model=FileDownloadResponse)
-async def download_file(service: str, file_id: str):
+async def download_file(
+    service: str,
+    file_id: str,
+    user: dict = Depends(get_current_user),
+):
     """Download a file from cloud storage"""
     import tempfile
     import uuid
@@ -165,7 +176,12 @@ async def download_file(service: str, file_id: str):
 
 
 @router.delete("/{file_id}")
-async def delete_file(service: str, file_id: str, permanent: bool = False):
+async def delete_file(
+    service: str,
+    file_id: str,
+    permanent: bool = False,
+    user: dict = Depends(get_current_user),
+):
     """Delete a file from cloud storage"""
     try:
         service_instance = get_service(service)

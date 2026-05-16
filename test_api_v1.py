@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Probar con /api/v1 en la URL"""
 import requests
+import os
 
-TOKEN = "312|QiTAhcxsVMmzJkUvbPQlBorcINER4TFBmpiv5PCUcf44574d"
+TOKEN = os.getenv("FOLDERFORT_TOKEN", "")
 BASE_URL = "https://na3.folderfort.com/api/v1"
+
+if not TOKEN:
+    print("❌ Set FOLDERFORT_TOKEN before running.")
+    raise SystemExit(1)
 
 print("🔍 Probando endpoints de /api/v1\n")
 

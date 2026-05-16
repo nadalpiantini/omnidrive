@@ -10,9 +10,9 @@ INSTRUCCIONES:
 import json
 import os
 
-# Token API de Folderfort (pégalo aquí si lo obtienes)
-FOLDERFORT_TOKEN = "TU_TOKEN_AQUI"  # <-- Pega el token aquí
-FOLDERFORT_EMAIL = "nadalpiantini@gmail.com"
+# Token API de Folderfort (pégalo aquí si lo obtienes) o usa variables de entorno
+FOLDERFORT_TOKEN = os.getenv("FOLDERFORT_TOKEN", "TU_TOKEN_AQUI")  # <-- Pega el token aquí
+FOLDERFORT_EMAIL = os.getenv("FOLDERFORT_EMAIL", "")
 
 def save_config():
     """Guardar token en configuración"""

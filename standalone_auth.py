@@ -4,9 +4,13 @@ import requests
 import json
 import os
 
-# Credenciales
-email = "nadalpiantini@gmail.com"
-password = "Teclados#13"
+# Credenciales desde entorno para evitar hardcodear
+email = os.getenv("FOLDERFORT_EMAIL", "")
+password = os.getenv("FOLDERFORT_PASSWORD", "")
+
+if not email or not password:
+    print("❌ Set FOLDERFORT_EMAIL and FOLDERFORT_PASSWORD before running.")
+    raise SystemExit(1)
 
 BASE_URL = "https://na2.folderfort.com"
 

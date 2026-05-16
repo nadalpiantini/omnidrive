@@ -1,16 +1,15 @@
 """
 Tests for memory and workflows.
 """
-import pytest
 import tempfile
-import os
+
 from omnidrive.memory.serena_client import MemoryManager
 from omnidrive.workflows.graphs import (
     Workflow,
     WorkflowEngine,
     WorkflowStatus,
+    create_backup_workflow,
     create_smart_sync_workflow,
-    create_backup_workflow
 )
 
 

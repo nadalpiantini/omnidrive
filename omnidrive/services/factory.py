@@ -2,11 +2,12 @@
 Service factory for creating cloud service instances.
 Eliminates repetitive service instantiation logic in CLI.
 """
-from typing import Optional, Dict, Type
-from .base import CloudService, ServiceError
-from .google_drive import GoogleDriveService
-from .folderfort import FolderfortService
+from typing import Dict, Type
+
 from ..config import load_config
+from .base import CloudService, ServiceError
+from .folderfort import FolderfortService
+from .google_drive import GoogleDriveService
 
 
 class ServiceFactory:

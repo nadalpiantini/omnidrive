@@ -22,8 +22,11 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     logger.info("🚀 OmniDrive API starting...")
+    logger.info("✅ OmniDrive API started successfully")
+    logger.info("📚 API Documentation: http://localhost:8000/docs")
     yield
     logger.info("🛑 OmniDrive API shutting down...")
+    logger.info("👋 OmniDrive API stopped")
 
 
 # Create FastAPI app
@@ -95,19 +98,6 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
         logger.info("WebSocket client disconnected")
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Run on startup"""
-    logger.info("✅ OmniDrive API started successfully")
-    logger.info("📚 API Documentation: http://localhost:8000/docs")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Run on shutdown"""
-    logger.info("👋 OmniDrive API stopped")
 
 
 if __name__ == "__main__":

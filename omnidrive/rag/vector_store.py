@@ -2,7 +2,7 @@
 Vector store for RAG system using ChromaDB.
 """
 import os
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 try:
     import chromadb
@@ -93,7 +93,7 @@ class VectorStore:
                 metadatas=metadatas
             )
         except Exception as e:
-            raise Exception(f"Failed to add documents to vector store: {e}")
+            raise Exception(f"Failed to add documents to vector store: {e}")  # noqa: B904
 
     def search(
         self,
@@ -136,7 +136,7 @@ class VectorStore:
             return formatted_results
 
         except Exception as e:
-            raise Exception(f"Failed to search vector store: {e}")
+            raise Exception(f"Failed to search vector store: {e}")  # noqa: B904
 
     def delete(self, ids: List[str]):
         """
@@ -151,7 +151,7 @@ class VectorStore:
         try:
             self.collection.delete(ids=ids)
         except Exception as e:
-            raise Exception(f"Failed to delete documents: {e}")
+            raise Exception(f"Failed to delete documents: {e}")  # noqa: B904
 
     def get(self, ids: List[str]) -> List[Dict[str, Any]]:
         """
@@ -170,7 +170,7 @@ class VectorStore:
             results = self.collection.get(ids=ids)
             return results
         except Exception as e:
-            raise Exception(f"Failed to get documents: {e}")
+            raise Exception(f"Failed to get documents: {e}")  # noqa: B904
 
     def count(self) -> int:
         """
@@ -193,7 +193,7 @@ class VectorStore:
             self.client.delete_collection(name=self.collection_name)
             self._initialize_collection()
         except Exception as e:
-            raise Exception(f"Failed to clear collection: {e}")
+            raise Exception(f"Failed to clear collection: {e}")  # noqa: B904
 
 
 def get_vector_store(collection_name: str = "omnidrive_files") -> VectorStore:

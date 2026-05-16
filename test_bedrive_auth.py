@@ -2,9 +2,14 @@
 """Probar autenticación de BeDrive con el token"""
 import requests
 import json
+import os
 
-TOKEN = "311|oZQrBtxWdmY0fP8nEtxqtlZChJihMxoZ8z1DxkmZ1208e30c"
+TOKEN = os.getenv("FOLDERFORT_TOKEN", "")
 BASE_URL = "https://na3.folderfort.com"  # Usar NA3 en lugar de NA2
+
+if not TOKEN:
+    print("❌ Set FOLDERFORT_TOKEN before running.")
+    raise SystemExit(1)
 
 print("🔍 Probando autenticación BeDrive...\n")
 

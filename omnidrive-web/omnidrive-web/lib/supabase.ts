@@ -1,16 +1,55 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nqzhxukuvmdlpewqytpv.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-// Client-side Supabase client (uses anon key)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Lazy initialization — avoid throwing at module-eval time when env vars are
+// missing (e.g. during `next build` static analysis on Vercel). Routes that
+// actually need Supabase call the factory at request time and get a clear
+// runtime error if the key isn't configured.
+let _supabase: SupabaseClient | null = null
+let _supabaseAdmin: SupabaseClient | null = null
 
-// Server-side Supabase client (uses service role key)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+export function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    if (!supabaseAnonKey) {
+      throw new Error(
+        'Supabase anon key missing — set NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment.'
+      )
+    }
+    _supabase = createClient(supabaseUrl, supabaseAnonKey)
+  }
+  return _supabase
+}
 
-// Database types
+export function getSupabaseAdmin(): SupabaseClient {
+  if (!_supabaseAdmin) {
+    if (!supabaseServiceKey) {
+      throw new Error(
+        'Supabase service key missing — set SUPABASE_SERVICE_ROLE_KEY in your environment.'
+      )
+    }
+    _supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+  }
+  return _supabaseAdmin
+}
+
+// Back-compat proxies — accessing properties triggers lazy init. Lets existing
+// `import { supabase, supabaseAdmin } from '@/lib/supabase'` keep working
+// without forcing route-level refactors.
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    return (getSupabase() as unknown as Record<string | symbol, unknown>)[prop]
+  },
+})
+
+export const supabaseAdmin = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    return (getSupabaseAdmin() as unknown as Record<string | symbol, unknown>)[prop]
+  },
+})
+
 export interface OmnidriveFile {
   id: string
   service: string
@@ -21,7 +60,7 @@ export interface OmnidriveFile {
   parent_id?: string
   created_at: string
   modified_at: string
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
 }
 
 export interface OmnidriveSyncJob {
@@ -34,7 +73,7 @@ export interface OmnidriveSyncJob {
   error_message?: string
   started_at: string
   completed_at?: string
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
 }
 
 export interface OmnidriveAuthConfig {

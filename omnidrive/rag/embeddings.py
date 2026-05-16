@@ -3,7 +3,7 @@ Embeddings generation for RAG system.
 Uses DeepSeek's embeddings API.
 """
 import os
-from typing import List, Union
+from typing import List
 
 try:
     from openai import OpenAI
@@ -51,7 +51,7 @@ class EmbeddingsGenerator:
         """
         try:
             # DeepSeek usa el endpoint de chat para generar embeddings
-            response = self.client.chat.completions.create(
+            self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": "You are a text embedding generator. Output only the embedding vector."},
@@ -65,7 +65,7 @@ class EmbeddingsGenerator:
             # si DeepSeek no tiene endpoint de embeddings dedicado
             return self._generate_embedding_fallback(text)
 
-        except Exception as e:
+        except Exception:
             # Fallback a método alternativo
             return self._generate_embedding_fallback(text)
 
@@ -80,7 +80,7 @@ class EmbeddingsGenerator:
             embedding = model.encode(text)
             return embedding.tolist()
         except ImportError:
-            raise ImportError(
+            raise ImportError(  # noqa: B904
                 "Sentence-transformers not installed. Install with: pip install sentence-transformers"
             )
 
@@ -100,7 +100,7 @@ class EmbeddingsGenerator:
             embeddings = model.encode(texts)
             return embeddings.tolist()
         except ImportError:
-            raise ImportError(
+            raise ImportError(  # noqa: B904
                 "Sentence-transformers not installed. Install with: pip install sentence-transformers"
             )
 

@@ -3,8 +3,7 @@ Base interface for all cloud storage services.
 All services must inherit from CloudService and implement these methods.
 """
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
-from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 class CloudService(ABC):

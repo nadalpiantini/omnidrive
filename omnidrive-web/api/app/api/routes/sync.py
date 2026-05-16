@@ -2,7 +2,7 @@
 Sync routes
 Handles cross-service synchronization and comparison
 """
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 import sys
 import os
 import tempfile
@@ -14,6 +14,7 @@ from omnidrive.services.google_drive import GoogleDriveService
 from omnidrive.services.folderfort import FolderfortService
 from omnidrive.auth import google as google_auth
 from omnidrive.auth import folderfort as folderfort_auth
+from auth.middleware import get_current_user
 
 from models.responses import SyncResponse, SyncJobResponse, CompareResponse
 from models.requests import SyncRequest, CompareRequest
@@ -42,7 +43,10 @@ def get_service(service_name: str):
 
 
 @router.post("/compare", response_model=CompareResponse)
-async def compare_services(request: CompareRequest):
+async def compare_services(
+    request: CompareRequest,
+    user: dict = Depends(get_current_user),
+):
     """Compare files between two cloud storage services"""
     try:
         if request.service1 == request.service2:
@@ -124,7 +128,11 @@ def run_sync_job(job_id: str, source: str, target: str, limit: int):
 
 
 @router.post("/", response_model=SyncResponse)
-async def sync_services(request: SyncRequest, background_tasks: BackgroundTasks):
+async def sync_services(
+    request: SyncRequest,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user),
+):
     """Sync files from source service to target service"""
     from datetime import datetime
 
@@ -190,7 +198,10 @@ async def sync_services(request: SyncRequest, background_tasks: BackgroundTasks)
 
 
 @router.get("/status/{job_id}", response_model=SyncJobResponse)
-async def get_sync_status(job_id: str):
+async def get_sync_status(
+    job_id: str,
+    user: dict = Depends(get_current_user),
+):
     """Get sync job status"""
     if job_id not in sync_jobs:
         raise HTTPException(status_code=404, detail="Job not found")

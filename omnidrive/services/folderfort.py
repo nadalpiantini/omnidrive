@@ -2,9 +2,14 @@
 Folderfort service implementation.
 """
 import os
+from typing import Any, Dict, List, Optional
+
 import requests
-from typing import List, Dict, Any, Optional
-from ..services.base import CloudService, ServiceError, AuthenticationError
+
+from ..logging_config import get_logger
+from ..services.base import AuthenticationError, CloudService, ServiceError
+
+logger = get_logger(__name__)
 
 
 class FolderfortService(CloudService):
@@ -72,6 +77,7 @@ class FolderfortService(CloudService):
                 data = response.json()
                 if data.get('status') == 'success':
                     self.access_token = data['user']['access_token']
+                    logger.info("Authenticated as %s", email)
                     return self.access_token
                 else:
                     raise AuthenticationError(
@@ -92,7 +98,8 @@ class FolderfortService(CloudService):
                 )
 
         except requests.RequestException as e:
-            raise AuthenticationError(
+            logger.error("Auth network error: %s", e)
+            raise AuthenticationError(  # noqa: B904
                 f"Network error: {e}",
                 service_name="folderfort"
             )
@@ -152,7 +159,9 @@ class FolderfortService(CloudService):
                 data = response.json()
                 # API returns paginated response with 'data' key
                 if isinstance(data, dict) and 'data' in data:
+                    logger.info("list_files returned %d items", len(data['data']))
                     return data['data']
+                logger.info("list_files returned %d items", len(data) if isinstance(data, list) else 1)
                 return data
             elif response.status_code == 401:
                 raise AuthenticationError(
@@ -166,7 +175,7 @@ class FolderfortService(CloudService):
                 )
 
         except requests.RequestException as e:
-            raise ServiceError(
+            raise ServiceError(  # noqa: B904
                 f"Network error: {e}",
                 service_name="folderfort"
             )
@@ -221,6 +230,7 @@ class FolderfortService(CloudService):
             if response.status_code == 201:
                 result = response.json()
                 if result.get('status') == 'success':
+                    logger.info("Uploaded %s (id=%s)", file_path, result['fileEntry'].get('id'))
                     return result['fileEntry']
                 else:
                     raise ServiceError(
@@ -244,7 +254,7 @@ class FolderfortService(CloudService):
                 )
 
         except requests.RequestException as e:
-            raise ServiceError(
+            raise ServiceError(  # noqa: B904
                 f"Network error: {e}",
                 service_name="folderfort"
             )
@@ -297,6 +307,7 @@ class FolderfortService(CloudService):
                 with open(dest_path, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         f.write(chunk)
+                logger.info("Downloaded %s to %s", file_id, dest_path)
                 return dest_path
             else:
                 raise ServiceError(
@@ -305,7 +316,7 @@ class FolderfortService(CloudService):
                 )
 
         except requests.RequestException as e:
-            raise ServiceError(
+            raise ServiceError(  # noqa: B904
                 f"Network error: {e}",
                 service_name="folderfort"
             )
@@ -342,6 +353,7 @@ class FolderfortService(CloudService):
 
             if response.status_code == 200:
                 result = response.json()
+                logger.info("Deleted file %s (permanent=%s)", file_id, permanent)
                 return result.get('status') == 'success'
             elif response.status_code == 401:
                 raise AuthenticationError(
@@ -355,7 +367,7 @@ class FolderfortService(CloudService):
                 )
 
         except requests.RequestException as e:
-            raise ServiceError(
+            raise ServiceError(  # noqa: B904
                 f"Network error: {e}",
                 service_name="folderfort"
             )
@@ -412,7 +424,7 @@ class FolderfortService(CloudService):
                 )
 
         except requests.RequestException as e:
-            raise ServiceError(
+            raise ServiceError(  # noqa: B904
                 f"Network error: {e}",
                 service_name="folderfort"
             )
@@ -444,7 +456,7 @@ class FolderfortService(CloudService):
             )
 
         except Exception as e:
-            raise ServiceError(
+            raise ServiceError(  # noqa: B904
                 f"Failed to get file metadata: {e}",
                 service_name="folderfort"
             )

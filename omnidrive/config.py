@@ -1,16 +1,34 @@
 """
 Configuration management for OmniDrive CLI.
 Handles loading and saving configuration from local files.
+
+Path resolution is lazy (per-call) so HOME monkeypatching in tests is honored —
+constants resolved at import time would freeze to whatever HOME was set when
+the module first loaded, causing tests in fresh CI environments to silently
+read the developer's real ~/.omnidrive instead of the temp HOME.
 """
-import os
 import json
-from pathlib import Path
-from typing import Dict, Any
+import os
+from typing import Any, Dict
 
 
-# Default configuration path
-CONFIG_DIR = os.path.expanduser("~/.omnidrive")
-CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
+def config_dir() -> str:
+    """Return the OmniDrive config directory, resolved per call."""
+    return os.path.expanduser("~/.omnidrive")
+
+
+def config_path() -> str:
+    """Return the full path to config.json, resolved per call."""
+    return os.path.join(config_dir(), "config.json")
+
+
+# Back-compat module attributes. Marked legacy — prefer config_dir() /
+# config_path() in new code. These resolve once at import time and are kept
+# only so existing `from omnidrive.config import CONFIG_PATH` keeps importing
+# without crashing. Anything that needs HOME-aware paths should call the
+# functions above.
+CONFIG_DIR = config_dir()
+CONFIG_PATH = config_path()
 
 
 def load_config() -> Dict[str, Any]:
@@ -20,9 +38,10 @@ def load_config() -> Dict[str, Any]:
     Returns:
         Dict with configuration data. Empty dict if file doesn't exist.
     """
-    if not os.path.exists(CONFIG_PATH):
+    path = config_path()
+    if not os.path.exists(path):
         return {}
-    with open(CONFIG_PATH, 'r') as f:
+    with open(path, 'r') as f:
         return json.load(f)
 
 
@@ -33,8 +52,8 @@ def save_config(cfg: Dict[str, Any]) -> None:
     Args:
         cfg: Configuration dictionary to save.
     """
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-    with open(CONFIG_PATH, 'w') as f:
+    os.makedirs(config_dir(), exist_ok=True)
+    with open(config_path(), 'w') as f:
         json.dump(cfg, f, indent=2)
 
 

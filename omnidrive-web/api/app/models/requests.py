@@ -6,6 +6,12 @@ from typing import Optional, List
 
 
 # Auth Models
+class LoginRequest(BaseModel):
+    """JWT login request (email + password)"""
+    email: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
+
+
 class GoogleAuthRequest(BaseModel):
     """Google Drive authentication request"""
     service_account_json: str = Field(..., description="Service account JSON content")

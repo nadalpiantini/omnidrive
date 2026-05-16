@@ -1,6 +1,6 @@
 """
 Authentication routes
-Handles Google Drive and Folderfort authentication
+Handles JWT login, user info, Google Drive and Folderfort authentication
 """
 from fastapi import APIRouter, HTTPException, Depends
 import sys
@@ -14,10 +14,55 @@ from omnidrive.auth import folderfort as folderfort_auth
 from omnidrive.config import load_config
 
 from models.responses import AuthResponse, AuthStatusResponse
-from models.requests import GoogleAuthRequest, FolderfortAuthRequest
+from models.requests import (
+    LoginRequest,
+    GoogleAuthRequest,
+    FolderfortAuthRequest,
+)
+from auth.jwt import create_access_token
+from auth.middleware import get_current_user
 
 router = APIRouter()
 
+# ---------------------------------------------------------------------------
+# MVP hardcoded admin user — replace with real DB lookup later
+# ---------------------------------------------------------------------------
+_MVP_USERS = {
+    "admin@omnidrive.io": "admin123",
+}
+
+
+@router.post("/login")
+async def login(request: LoginRequest):
+    """
+    Authenticate with email + password and return a JWT.
+
+    MVP: only the hardcoded admin user is accepted.
+    """
+    stored_password = _MVP_USERS.get(request.email)
+    if stored_password is None or stored_password != request.password:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password",
+        )
+
+    token = create_access_token(subject=request.email)
+    return {"access_token": token, "token_type": "bearer"}
+
+
+@router.get("/me")
+async def me(user: dict = Depends(get_current_user)):
+    """Return the current authenticated user's info (JWT-protected)."""
+    return {
+        "email": user.get("sub"),
+        "token_issued_at": user.get("iat"),
+        "token_expires_at": user.get("exp"),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Existing routes — kept exactly as before
+# ---------------------------------------------------------------------------
 
 @router.get("/status", response_model=AuthStatusResponse)
 async def get_auth_status():

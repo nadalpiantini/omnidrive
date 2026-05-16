@@ -2,9 +2,11 @@
 Authentication module for Folderfort.
 Handles email/password authentication and token management.
 """
-import click
 import getpass
 from typing import Optional
+
+import click
+
 from ..config import load_config, set_config_value
 from ..services.folderfort import FolderfortService
 
@@ -60,14 +62,14 @@ def authenticate_folderfort(email: Optional[str] = None, password: Optional[str]
         set_config_value('folderfort_token', token)
         set_config_value('folderfort_email', email)
 
-        click.echo(f"✓ Folderfort authenticated successfully!")
-        click.echo(f"  Token saved to: ~/.omnidrive/config.json")
+        click.echo("✓ Folderfort authenticated successfully!")
+        click.echo("  Token saved to: ~/.omnidrive/config.json")
 
         return token
 
     except Exception as e:
         click.secho(f"✗ Authentication failed: {e}", fg='red')
-        raise click.Abort()
+        raise click.Abort()  # noqa: B904
 
 
 def get_folderfort_token() -> Optional[str]:

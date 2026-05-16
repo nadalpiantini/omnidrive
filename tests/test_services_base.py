@@ -2,11 +2,8 @@
 Tests for CloudService base class.
 """
 import pytest
-from omnidrive.services.base import (
-    CloudService,
-    ServiceError,
-    AuthenticationError
-)
+
+from omnidrive.services.base import AuthenticationError, CloudService, ServiceError
 
 
 # Mock implementation for testing

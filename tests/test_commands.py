@@ -1,9 +1,8 @@
 """
 Tests for CLI commands (upload, sync, compare).
 """
-import os
-import pytest
 from click.testing import CliRunner
+
 from omnidrive.cli import cli
 
 
