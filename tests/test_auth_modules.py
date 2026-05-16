@@ -1,9 +1,7 @@
 """
 Tests for authentication modules to improve coverage from 16-25% to 40%+.
 """
-import pytest
 from unittest.mock import patch
-import os
 
 
 class TestGoogleAuth:

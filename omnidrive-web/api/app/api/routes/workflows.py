@@ -2,7 +2,7 @@
 Workflow routes
 Handles workflow execution and management
 """
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 import sys
 import os
 import uuid
@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 
 from omnidrive.workflows.graphs import get_workflow_engine
 from api.websocket.handler import ws_manager
+from auth.middleware import get_current_user
 
 from models.responses import (
     WorkflowsListResponse,
@@ -28,7 +29,7 @@ workflow_jobs = {}
 
 
 @router.get("/", response_model=WorkflowsListResponse)
-async def list_workflows():
+async def list_workflows(user: dict = Depends(get_current_user)):
     """List all available workflows"""
     try:
         engine = get_workflow_engine()
@@ -89,7 +90,8 @@ def run_workflow_job(job_id: str, workflow_name: str, parameters: dict = None):
 async def run_workflow(
     name: str,
     background_tasks: BackgroundTasks,
-    request: WorkflowRunRequest = None
+    request: WorkflowRunRequest = None,
+    user: dict = Depends(get_current_user),
 ):
     """Run a workflow"""
     try:
@@ -142,7 +144,11 @@ async def run_workflow(
 
 
 @router.get("/{name}/status/{job_id}", response_model=WorkflowStatusResponse)
-async def get_workflow_status(name: str, job_id: str):
+async def get_workflow_status(
+    name: str,
+    job_id: str,
+    user: dict = Depends(get_current_user),
+):
     """Get workflow execution status"""
     if job_id not in workflow_jobs:
         raise HTTPException(status_code=404, detail="Job not found")

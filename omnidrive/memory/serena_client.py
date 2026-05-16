@@ -1,10 +1,10 @@
 """
 Persistent memory management using Serena MCP.
 """
-import os
 import json
-from typing import Dict, Any, List, Optional
+import os
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 class MemoryManager:

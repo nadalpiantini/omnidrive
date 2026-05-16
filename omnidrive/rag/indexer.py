@@ -2,9 +2,10 @@
 File indexer for RAG system.
 Extracts text from files and generates embeddings.
 """
+import logging
 import os
-from typing import List, Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 try:
     import pypdf
@@ -18,8 +19,11 @@ try:
 except ImportError:
     DOCX_AVAILABLE = False
 
+from ..logging_config import get_logger
 from .embeddings import EmbeddingsGenerator
 from .vector_store import VectorStore
+
+logger = get_logger(__name__)
 
 
 class FileIndexer:
@@ -63,7 +67,7 @@ class FileIndexer:
             # Extract text from file
             text = self._extract_text(file_path)
             if not text:
-                print(f"  ⚠ Skipping {file_path}: no text extracted")
+                logger.warning("Skipping %s: no text extracted", file_path)
                 return False
 
             # Generate embedding
@@ -91,7 +95,7 @@ class FileIndexer:
             return True
 
         except Exception as e:
-            print(f"  ✗ Error indexing {file_path}: {e}")
+            logger.error("Error indexing %s: %s", file_path, e)
             return False
 
     def index_files(
@@ -112,10 +116,10 @@ class FileIndexer:
         stats = {'success': 0, 'failed': 0, 'skipped': 0}
 
         for file_data in files:
-            file_id = file_data.get('id')
+            file_data.get('id')
             file_name = file_data.get('name')
 
-            print(f"  📄 {file_name}")
+            logger.debug("Indexing file: %s", file_name)
 
             # For now, we can't index without the actual file path
             # In a full implementation, we would download files first
@@ -144,7 +148,7 @@ class FileIndexer:
             # PDF files
             elif file_ext == '.pdf':
                 if not PYPDF_AVAILABLE:
-                    print("  ⚠ pypdf not installed, cannot index PDF files")
+                    logger.warning("pypdf not installed, cannot index PDF files")
                     return None
                 text = []
                 with open(file_path, 'rb') as f:
@@ -158,17 +162,17 @@ class FileIndexer:
             # DOCX files
             elif file_ext == '.docx':
                 if not DOCX_AVAILABLE:
-                    print("  ⚠ python-docx not installed, cannot index DOCX files")
+                    logger.warning("python-docx not installed, cannot index DOCX files")
                     return None
                 doc = docx.Document(file_path)
                 return "\n".join([paragraph.text for paragraph in doc.paragraphs])
 
             else:
-                print(f"  ⚠ Unsupported file type: {file_ext}")
+                logger.warning("Unsupported file type: %s", file_ext)
                 return None
 
         except Exception as e:
-            print(f"  ✗ Error extracting text: {e}")
+            logger.error("Error extracting text: %s", e)
             return None
 
 
@@ -224,4 +228,4 @@ class SemanticSearch:
             return results
 
         except Exception as e:
-            raise Exception(f"Search failed: {e}")
+            raise Exception(f"Search failed: {e}")  # noqa: B904

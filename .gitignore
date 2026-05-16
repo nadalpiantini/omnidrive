@@ -73,3 +73,22 @@ htmlcov/
 *.tmp
 *.temp
 *_temp.py
+
+# Virtualenv (Fase 1 — 2026-05)
+.venv/
+
+# Python version pin
+.python-version
+
+# Local test artifacts
+.benchmarks/
+.coverage
+.ruff_cache/
+
+# Backup files from prior cleanup
+*.backup-*
+
+# Local artifacts
+api_docs_response.html
+auth_final.py
+

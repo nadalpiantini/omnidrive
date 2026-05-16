@@ -5,7 +5,8 @@ Python decorators for integrating Frontier Pack governance with OmniDrive CLI.
 """
 
 import functools
-from typing import Callable, Any, Optional, List
+from typing import Callable, Optional
+
 from .frontier_bridge import get_bridge
 
 

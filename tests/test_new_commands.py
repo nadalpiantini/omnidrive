@@ -1,8 +1,8 @@
 """
 Tests for new CLI commands: delete and create-folder.
 """
-import pytest
 from click.testing import CliRunner
+
 from omnidrive.cli import cli
 
 

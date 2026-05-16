@@ -2,8 +2,14 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { spawn } from 'child_process'
 import path from 'path'
 
-const OMNIDRIVE_CLI = path.join(process.env.HOME || '', 'Dev/omnidrive-cli')
-const PYTHON_PATH = path.join(OMNIDRIVE_CLI, '.venv/bin/python3')
+// Resolve CLI: bundled in resources, or fall back to PATH
+const isDev = !!process.env.VITE_DEV_SERVER_URL
+const OMNIDRIVE_CLI = isDev
+  ? path.join(process.env.HOME || '', 'Dev/omnidrive-cli')
+  : process.resourcesPath
+const PYTHON_PATH = isDev
+  ? path.join(OMNIDRIVE_CLI, '.venv/bin/python3')
+  : path.join(OMNIDRIVE_CLI, 'python', 'bin', 'python3')
 
 let mainWindow: BrowserWindow | null = null
 

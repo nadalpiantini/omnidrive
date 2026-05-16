@@ -1,17 +1,22 @@
 """
 Google Drive service implementation.
 """
-import os
 import json
+import logging
+import os
 import time
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
+from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from ..services.base import CloudService, ServiceError, AuthenticationError
 
+from ..logging_config import get_logger
+from ..services.base import AuthenticationError, CloudService, ServiceError
+
+logger = get_logger(__name__)
 
 # Google Drive API scopes
 SCOPES = ['https://www.googleapis.com/auth/drive']
@@ -153,6 +158,7 @@ class GoogleDriveService(CloudService):
             AuthenticationError: If credentials file not found
         """
         if not self.credentials_path or not os.path.exists(self.credentials_path):
+            logger.error("Auth failed: credentials file not found at %s", self.credentials_path)
             raise AuthenticationError(
                 "Google credentials file not found",
                 service_name="google"
@@ -161,6 +167,7 @@ class GoogleDriveService(CloudService):
         # For service account, we don't get a traditional access token
         # Return a placeholder to indicate authentication succeeded
         self.access_token = "service_account"
+        logger.info("Authenticated via service account")
         return self.access_token
 
     def list_files(
@@ -192,6 +199,7 @@ class GoogleDriveService(CloudService):
             if use_cache:
                 cached_data = self._get_from_cache(cache_key)
                 if cached_data is not None:
+                    logger.debug("list_files cache hit: folder=%s limit=%d", folder_id, limit)
                     return cached_data[:limit]  # Return cached data, respecting limit
 
             # Build query
@@ -225,10 +233,12 @@ class GoogleDriveService(CloudService):
             if use_cache:
                 self._set_cache(cache_key, all_files)
 
+            logger.info("list_files returned %d items, folder=%s", len(all_files), folder_id)
             return all_files[:limit]
 
         except HttpError as e:
-            raise ServiceError(f"Failed to list files: {e}", service_name="google")
+            logger.error("list_files failed: %s", e)
+            raise ServiceError(f"Failed to list files: {e}", service_name="google")  # noqa: B904
 
     def upload_file(
         self,
@@ -265,12 +275,15 @@ class GoogleDriveService(CloudService):
                 fields='id,name,size,createdTime'
             ).execute()
 
+            logger.info("Uploaded %s (id=%s)", file_path, file.get('id'))
             return file
 
         except HttpError as e:
-            raise ServiceError(f"Failed to upload file: {e}", service_name="google")
+            logger.error("Upload failed for %s: %s", file_path, e)
+            raise ServiceError(f"Failed to upload file: {e}", service_name="google")  # noqa: B904
         except Exception as e:
-            raise ServiceError(f"Failed to upload file: {e}", service_name="google")
+            logger.error("Upload failed for %s: %s", file_path, e)
+            raise ServiceError(f"Failed to upload file: {e}", service_name="google")  # noqa: B904
 
     def download_file(
         self,
@@ -293,8 +306,8 @@ class GoogleDriveService(CloudService):
             ServiceError: If download fails
         """
         try:
+
             from googleapiclient.http import MediaIoBaseDownload
-            import io
 
             # Get file metadata to determine filename
             file_meta = self.service.files().get(fileId=file_id, fields='name').execute()
@@ -313,10 +326,12 @@ class GoogleDriveService(CloudService):
                 while done is False:
                     status, done = downloader.next_chunk()
 
+            logger.info("Downloaded %s to %s", file_id, dest_path)
             return dest_path
 
         except HttpError as e:
-            raise ServiceError(f"Failed to download file: {e}", service_name="google")
+            logger.error("Download failed for %s: %s", file_id, e)
+            raise ServiceError(f"Failed to download file: {e}", service_name="google")  # noqa: B904
 
     def delete_file(
         self,
@@ -347,10 +362,12 @@ class GoogleDriveService(CloudService):
                     fileId=file_id,
                     body={'trashed': True}
                 ).execute()
+            logger.info("Deleted file %s (permanent=%s)", file_id, permanent)
             return True
 
         except HttpError as e:
-            raise ServiceError(f"Failed to delete file: {e}", service_name="google")
+            logger.error("Delete failed for %s: %s", file_id, e)
+            raise ServiceError(f"Failed to delete file: {e}", service_name="google")  # noqa: B904
 
     def create_folder(
         self,
@@ -389,4 +406,4 @@ class GoogleDriveService(CloudService):
             return folder
 
         except HttpError as e:
-            raise ServiceError(f"Failed to create folder: {e}", service_name="google")
+            raise ServiceError(f"Failed to create folder: {e}", service_name="google")  # noqa: B904

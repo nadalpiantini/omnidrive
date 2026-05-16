@@ -3,9 +3,11 @@ Authentication module for Google Drive.
 Handles OAuth2 flow and service account authentication.
 """
 import os
-import click
 from typing import Optional
-from ..config import load_config, save_config, set_config_value
+
+import click
+
+from ..config import load_config, set_config_value
 
 
 def authenticate_google() -> str:
@@ -46,8 +48,8 @@ def authenticate_google() -> str:
     # Save to config
     set_config_value('google_key_path', os.path.abspath(key_path))
 
-    click.echo(f"✓ Google Drive authenticated successfully!")
-    click.echo(f"  Credentials saved to: ~/.omnidrive/config.json")
+    click.echo("✓ Google Drive authenticated successfully!")
+    click.echo("  Credentials saved to: ~/.omnidrive/config.json")
 
     return "service_account"
 

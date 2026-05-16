@@ -2,9 +2,11 @@
 Integration tests for CLI commands using Click CliRunner.
 Tests full command flows with mocked services.
 """
+from unittest.mock import Mock, patch
+
 import pytest
 from click.testing import CliRunner
-from unittest.mock import Mock, patch, MagicMock
+
 from omnidrive.cli import cli
 from omnidrive.services.base import ServiceError
 
@@ -20,7 +22,7 @@ class TestListCommandIntegration:
         with patch('omnidrive.cli.google_auth.is_google_authenticated', return_value=False):
             with patch('omnidrive.cli.click.confirm', return_value=True):
                 with patch('omnidrive.cli._authenticate_service') as mock_auth:
-                    result = runner.invoke(cli, ['list', '--drive', 'google'])
+                    runner.invoke(cli, ['list', '--drive', 'google'])
 
                     # Should prompt for authentication
                     mock_auth.assert_called_once_with('google')
@@ -308,12 +310,10 @@ class TestSyncCommandIntegration:
         """Test successful sync between services."""
         runner = CliRunner()
 
-        source_files = [{'id': '1', 'name': 'new.txt', 'mimeType': 'text/plain'}]
-        target_files = []
 
         with patch('omnidrive.cli._get_files_from_service', return_value=[]):
             with patch('omnidrive.cli.click.confirm', return_value=True):
-                with patch('omnidrive.cli._sync_file') as mock_sync:
+                with patch('omnidrive.cli._sync_file'):
                     result = runner.invoke(cli, ['sync', 'google', 'folderfort', '--limit', '1'])
 
                     # Sync should execute
@@ -351,8 +351,8 @@ class TestServiceFactoryIntegration:
     def test_factory_creates_correct_service(self):
         """Test ServiceFactory creates correct service instances."""
         from omnidrive.services import ServiceFactory
-        from omnidrive.services.google_drive import GoogleDriveService
         from omnidrive.services.folderfort import FolderfortService
+        from omnidrive.services.google_drive import GoogleDriveService
 
         # Test without auto-auth (no auth modules needed)
         google_service = ServiceFactory.create_service('google', auto_authenticate=False)

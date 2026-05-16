@@ -4,12 +4,11 @@ Frontier Bridge - Python interface to OpenClaw's Frontier Pack
 Executes JavaScript skills via subprocess and provides Python-native API.
 """
 
-import subprocess
 import json
-import os
-from pathlib import Path
-from typing import Any, Optional
+import subprocess
 from datetime import datetime
+from pathlib import Path
+from typing import Optional
 
 OPENCLAW_DIR = Path.home() / '.openclaw'
 FRONTIER_DIR = OPENCLAW_DIR / 'skills' / 'frontier'
@@ -135,7 +134,7 @@ class FrontierBridge:
 
     def _cli_approval_prompt(self, action: str, resource: str, reason: str) -> bool:
         """Fallback CLI prompt for approval"""
-        print(f"\n⚠️  Approval Required")
+        print("\n⚠️  Approval Required")
         print(f"   Action: {action}")
         print(f"   Resource: {resource}")
         print(f"   Reason: {reason}")

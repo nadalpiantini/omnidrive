@@ -2,11 +2,9 @@
 Configuration management for OmniDrive CLI.
 Handles loading and saving configuration from local files.
 """
-import os
 import json
-from pathlib import Path
-from typing import Dict, Any
-
+import os
+from typing import Any, Dict
 
 # Default configuration path
 CONFIG_DIR = os.path.expanduser("~/.omnidrive")

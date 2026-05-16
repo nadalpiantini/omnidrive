@@ -2,11 +2,10 @@
 End-to-End Validation for OmniDrive CLI
 Validates: Frontend (CLI), Backend (Services), Database (Persistence)
 """
+import json
 import os
 import sys
 import tempfile
-import json
-from pathlib import Path
 
 # Test imports (Backend validation)
 print("=" * 70)
@@ -14,7 +13,7 @@ print("🔍 LAYER 1: BACKEND (Services) Validation")
 print("=" * 70)
 
 try:
-    from omnidrive.services.base import CloudService, ServiceError, AuthenticationError
+    from omnidrive.services.base import AuthenticationError, CloudService, ServiceError
     print("✅ CloudService base class imported")
 
     from omnidrive.services.google_drive import GoogleDriveService
@@ -57,10 +56,10 @@ print("🔍 LAYER 2: RAG System Validation")
 print("=" * 70)
 
 try:
-    from omnidrive.rag.embeddings import EmbeddingsGenerator, OPENAI_AVAILABLE
+    from omnidrive.rag.embeddings import OPENAI_AVAILABLE, EmbeddingsGenerator
     print(f"✅ EmbeddingsGenerator imported (OpenAI available: {OPENAI_AVAILABLE})")
 
-    from omnidrive.rag.vector_store import VectorStore, CHROMADB_AVAILABLE
+    from omnidrive.rag.vector_store import CHROMADB_AVAILABLE, VectorStore
     print(f"✅ VectorStore imported (ChromaDB available: {CHROMADB_AVAILABLE})")
 
     from omnidrive.rag.indexer import FileIndexer, SemanticSearch
@@ -84,13 +83,12 @@ print("🔍 LAYER 3: Workflows & Memory Validation")
 print("=" * 70)
 
 try:
-    from omnidrive.memory.serena_client import MemoryManager, get_memory_manager
+    from omnidrive.memory.serena_client import get_memory_manager
     print("✅ MemoryManager imported")
 
     from omnidrive.workflows.graphs import (
-        Workflow, WorkflowResult, WorkflowStatus,
-        WorkflowEngine, get_workflow_engine,
-        create_smart_sync_workflow, create_backup_workflow
+        Workflow,
+        create_smart_sync_workflow,
     )
     print("✅ Workflow engine imported")
 
@@ -135,9 +133,10 @@ print("🔍 LAYER 4: Database/Configuration Validation")
 print("=" * 70)
 
 try:
-    from omnidrive.config import load_config, save_config, get_config_value, set_config_value
-    import tempfile
     import shutil
+    import tempfile
+
+    from omnidrive.config import get_config_value, load_config, save_config, set_config_value
 
     print("✅ Configuration module imported")
 
@@ -214,8 +213,9 @@ print("🔍 LAYER 5: Frontend (CLI) Validation")
 print("=" * 70)
 
 try:
-    from omnidrive.cli import cli, DRIVES
     from click.testing import CliRunner
+
+    from omnidrive.cli import DRIVES, cli
 
     print("✅ CLI imported")
     print(f"📋 Supported drives: {DRIVES}")
@@ -280,8 +280,8 @@ print("🔍 LAYER 6: Authentication Validation")
 print("=" * 70)
 
 try:
-    from omnidrive.auth import google as google_auth
     from omnidrive.auth import folderfort as folderfort_auth
+    from omnidrive.auth import google as google_auth
 
     print("✅ Authentication modules imported")
 

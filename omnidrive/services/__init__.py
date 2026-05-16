@@ -1,10 +1,10 @@
 """
 Cloud storage services.
 """
-from .base import CloudService, ServiceError, AuthenticationError
+from .base import AuthenticationError, CloudService, ServiceError
 from .factory import ServiceFactory
-from .google_drive import GoogleDriveService
 from .folderfort import FolderfortService
+from .google_drive import GoogleDriveService
 
 __all__ = [
     'CloudService',

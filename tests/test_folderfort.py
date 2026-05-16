@@ -1,11 +1,12 @@
 """
 Tests for Folderfort service.
 """
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-import json
-from unittest.mock import Mock, patch, MagicMock
+
+from omnidrive.services.base import AuthenticationError
 from omnidrive.services.folderfort import FolderfortService
-from omnidrive.services.base import AuthenticationError, ServiceError
 
 
 class TestFolderfortService:
